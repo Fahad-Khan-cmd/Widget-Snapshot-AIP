@@ -11,10 +11,8 @@
  *   node fetch-aave-proposal.mjs 411
  *   node fetch-aave-proposal.mjs "https://app.aave.com/governance/v3/proposal/?proposalId=411"
  */
-
-const GRAPH_API_KEY = "9e7b4a29889ac6c358b235230a5fe940";
-const SUBGRAPH_ID = "A7QMszgomC9cnnfpAcqZVLr2DffvkGNfimD8iUSMiurK";
-const SUBGRAPH_URL = `https://gateway.thegraph.com/api/${GRAPH_API_KEY}/subgraphs/id/${SUBGRAPH_ID}`;
+// fetch GRAPH_API_KEY & SUBGRAPH_ID from .env file
+const SUBGRAPH_URL = `https://gateway.thegraph.com/api/${process.env.GRAPH_API_KEY}/subgraphs/id/${process.env.SUBGRAPH_ID}`;
 
 /**
  * Extract proposal ID from various Aave governance URL formats
