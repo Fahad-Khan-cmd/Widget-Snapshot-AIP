@@ -1,8 +1,12 @@
 import { ethers } from "ethers";
 import fetch from "node-fetch";
+import "dotenv/config";
 
-const GRAPH_API_KEY = "9e7b4a29889ac6c358b235230a5fe940";
-const SUBGRAPH_ID = "A7QMszgomC9cnnfpAcqZVLr2DffvkGNfimD8iUSMiurK";
+// const GRAPH_API_KEY = "9e7b4a29889ac6c358b235230a5fe940";
+// const SUBGRAPH_ID = "A7QMszgomC9cnnfpAcqZVLr2DffvkGNfimD8iUSMiurK";
+
+const GRAPH_API_KEY = process.env.GRAPH_API_KEY;
+const SUBGRAPH_ID = process.env.SUBGRAPH_ID;
 const SUBGRAPH_URL = `https://gateway.thegraph.com/api/${GRAPH_API_KEY}/subgraphs/id/${SUBGRAPH_ID}`;
 
 // Aave Governance V3 Contract Addresses by Chain
@@ -18,17 +22,17 @@ const SUBGRAPH_URL = `https://gateway.thegraph.com/api/${GRAPH_API_KEY}/subgraph
 // on-chain proposal IDs, or the subgraph might be indexing a different contract
 const AAVE_GOVERNANCE_V3_CONTRACTS = {
   ethereum: {
-    address: "0xEC568fffba86c094cf06b22134B23074DFE2252c",
+    address: process.env.address,
     rpc: "https://eth.llamarpc.com",
     name: "Ethereum Mainnet",
   },
   polygon: {
-    address: "0xEC568fffba86c094cf06b22134B23074DFE2252c", // Same address on Polygon
+    address: process.env.address, // Same address on Polygon
     rpc: "https://polygon-rpc.com", // Public Polygon RPC
     name: "Polygon",
   },
   avalanche: {
-    address: "0xEC568fffba86c094cf06b22134B23074DFE2252c", // Same address on Avalanche
+    address: process.env.address, // Same address on Avalanche
     rpc: "https://api.avax.network/ext/bc/C/rpc", // Public Avalanche RPC
     name: "Avalanche",
   },
