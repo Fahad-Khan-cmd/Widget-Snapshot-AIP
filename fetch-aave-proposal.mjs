@@ -146,18 +146,23 @@ async function fetchProposalById(proposalId) {
       return null;
     }
 
-    const proposals = json.data?.proposals;
+    let proposals = json.data?.proposals;
 
     if (!proposals || proposals.length === 0) {
       return null;
     }
 
-    return proposals[0];
+    proposals.sort((a, b) => b.created - a.created);
+
+    proposals = proposals.slice(0, 3);
+
+    return proposals;
   } catch (err) {
     console.error("Fetch Error:", err.message);
     return null;
   }
 }
+
 
 /**
  * Display proposal information in a formatted way
