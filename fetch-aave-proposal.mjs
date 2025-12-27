@@ -12,6 +12,8 @@
  *   node fetch-aave-proposal.mjs "https://app.aave.com/governance/v3/proposal/?proposalId=411"
  */
 // fetch GRAPH_API_KEY & SUBGRAPH_ID from .env file
+const GRAPH_API_KEY = process.env.GRAPH_API_KEY || "9e7b4a29889ac6c358b235230a5fe940";
+const SUBGRAPH_ID = process.env.SUBGRAPH_ID || "A7QMszgomC9cnnfpAcqZVLr2DffvkGNfimD8iUSMiurK";
 const SUBGRAPH_URL = `https://gateway.thegraph.com/api/${process.env.GRAPH_API_KEY}/subgraphs/id/${process.env.SUBGRAPH_ID}`;
 
 /**
