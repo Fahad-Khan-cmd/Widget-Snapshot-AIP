@@ -12,8 +12,9 @@
  *   node fetch-aave-proposal.mjs "https://app.aave.com/governance/v3/proposal/?proposalId=411"
  */
 
-const GRAPH_API_KEY = "9e7b4a29889ac6c358b235230a5fe940";
-const SUBGRAPH_ID = "A7QMszgomC9cnnfpAcqZVLr2DffvkGNfimD8iUSMiurK";
+
+const GRAPH_API_KEY = process.env.GRAPH_API_KEY || "9e7b4a29889ac6c358b235230a5fe940";
+const SUBGRAPH_ID = process.env.SUBGRAPH_ID || "A7QMszgomC9cnnfpAcqZVLr2DffvkGNfimD8iUSMiurK";
 const SUBGRAPH_URL = `https://gateway.thegraph.com/api/${GRAPH_API_KEY}/subgraphs/id/${SUBGRAPH_ID}`;
 
 /**
@@ -148,13 +149,17 @@ async function fetchProposalById(proposalId) {
       return null;
     }
 
-    const proposals = json.data?.proposals;
+    let proposals = json.data?.proposals;
 
     if (!proposals || proposals.length === 0) {
       return null;
     }
 
-    return proposals[0];
+    proposals.sort((a, b) => b.created - a.created);
+
+    proposals = proposals.slice(0, 3);
+
+    return proposals;
   } catch (err) {
     console.error("Fetch Error:", err.message);
     return null;

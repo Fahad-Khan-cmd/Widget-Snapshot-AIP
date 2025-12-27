@@ -1,8 +1,8 @@
 import { ethers } from "ethers";
 import fetch from "node-fetch";
 
-const GRAPH_API_KEY = "9e7b4a29889ac6c358b235230a5fe940";
-const SUBGRAPH_ID = "A7QMszgomC9cnnfpAcqZVLr2DffvkGNfimD8iUSMiurK";
+const GRAPH_API_KEY = process.env.GRAPH_API_KEY || "9e7b4a29889ac6c358b235230a5fe940";
+const SUBGRAPH_ID = process.env.SUBGRAPH_ID || "A7QMszgomC9cnnfpAcqZVLr2DffvkGNfimD8iUSMiurK";
 const SUBGRAPH_URL = `https://gateway.thegraph.com/api/${GRAPH_API_KEY}/subgraphs/id/${SUBGRAPH_ID}`;
 
 // Aave Governance V3 Contract Addresses by Chain

@@ -2359,8 +2359,18 @@ export default apiInitializer((api) => {
     return formatted.toString();
   }
 
-  function renderProposalWidget(container, proposalData, originalUrl) {
+  
+
+
+// fluctuating issue of rendering widgets
+function renderProposalWidget(container, proposalData, originalUrl) {
     console.log("🎨 [RENDER] Rendering widget with data:", proposalData);
+    
+    // ✅ FLICKER FIX 1: Container hide karo shuru mein
+    if (container) {
+        container.style.opacity = '0';
+        container.style.transition = 'opacity 0.3s ease-in-out';
+    }
     
     if (!container) {
       console.error("❌ [RENDER] Container is null!");
@@ -2462,7 +2472,20 @@ export default apiInitializer((api) => {
         </div>
       </div>
     `;
+    
+    // ✅ FLICKER FIX 2: Smooth show after render
+    setTimeout(() => {
+        if (container) {
+            container.style.opacity = '1';
+        }
+    }, 100);
+    
+    console.log("✅ [RENDER] Widget rendered with smooth fade-in");
   }
+
+
+
+  
 
 
   // Render status widget on the right side (outside post box) - like the image
