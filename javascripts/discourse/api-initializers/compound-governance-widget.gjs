@@ -3,21 +3,18 @@ import { apiInitializer } from "discourse/lib/api";
 import Component from "@glimmer/component";
 import { action } from "@ember/object";
 
-export default class ScrollFixComponent extends Component {
+export default class CompoundGovernanceWidget extends Component {
   @action
   fixScroll() {
-    // Check if it's a topic page
     if (window.location.pathname.includes("/t/")) {
       console.log("📌 Topic page detected, fixing scroll...");
 
       setTimeout(() => {
-        // Remove post anchor
         const cleanUrl =
           window.location.pathname + window.location.search;
 
         window.history.replaceState({}, document.title, cleanUrl);
 
-        // Scroll to top
         window.scrollTo({
           top: 0,
           left: 0,
@@ -28,6 +25,11 @@ export default class ScrollFixComponent extends Component {
       }, 150);
     }
   }
+}
+
+<template>
+  <div {{did-insert this.fixScroll}}></div>
+</template>
 
 
 console.log("✅ Aave Governance Widget: JavaScript file loaded!");
