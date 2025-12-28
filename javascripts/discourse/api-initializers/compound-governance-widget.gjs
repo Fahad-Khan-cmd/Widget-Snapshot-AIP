@@ -1,6 +1,24 @@
 import { apiInitializer } from "discourse/lib/api";
 
 
+// IMMEDIATE FIX - Add this at VERY TOP of compound-governance-widget.gjs
+(function() {
+  // Block all Discourse scrolling immediately
+  if (window.Discourse) {
+    window.Discourse.scrollTo = function() { return false; };
+    window.Discourse.jumpToPost = function() { return false; };
+  }
+  
+  // Block hash changes
+  window.addEventListener('hashchange', function(e) {
+    e.stopImmediatePropagation();
+    return false;
+  }, true);
+  
+  // Force scroll to top on load
+  window.scrollTo(0, 0);
+})();
+
 console.log("✅ Aave Governance Widget: JavaScript file loaded!");
 
 
