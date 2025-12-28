@@ -1,17 +1,34 @@
 import { apiInitializer } from "discourse/lib/api";
 
-document.addEventListener('DOMContentLoaded', function() {
-  if (window.location.pathname.includes("/t/")) {
-    setTimeout(() => {
-      if (window.location.hash) {
-        const cleanUrl = window.location.pathname + window.location.search;
+import Component from "@glimmer/component";
+import { action } from "@ember/object";
+
+export default class ScrollFixComponent extends Component {
+  @action
+  fixScroll() {
+    // Check if it's a topic page
+    if (window.location.pathname.includes("/t/")) {
+      console.log("📌 Topic page detected, fixing scroll...");
+
+      setTimeout(() => {
+        // Remove post anchor
+        const cleanUrl =
+          window.location.pathname + window.location.search;
+
         window.history.replaceState({}, document.title, cleanUrl);
-        window.scrollTo(0, 0);
-        console.log("Scroll fixed: Topic opens at top");
-      }
-    }, 150);
+
+        // Scroll to top
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: "auto",
+        });
+
+        console.log("✅ Scroll fixed to top");
+      }, 150);
+    }
   }
-});
+
 
 console.log("✅ Aave Governance Widget: JavaScript file loaded!");
 

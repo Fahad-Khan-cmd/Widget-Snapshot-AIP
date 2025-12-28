@@ -2,6 +2,7 @@
   "private": true,
   "devDependencies": {
     "@discourse/lint-configs": "2.32.0",
+    "@ember/render-modifiers": "^3.0.0",
     "ember-template-lint": "7.9.1",
     "eslint": "9.37.0",
     "prettier": "3.6.2",
@@ -13,7 +14,7 @@
     "yarn": "please-use-pnpm",
     "pnpm": "9.x"
   },
-"packageManager": "pnpm@9.15.5",
+  "packageManager": "pnpm@9.15.5",
   "dependencies": {
     "dotenv": "^17.2.3"
   }
