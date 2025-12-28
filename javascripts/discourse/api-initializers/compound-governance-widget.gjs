@@ -1,30 +1,6 @@
 import { apiInitializer } from "discourse/lib/api";
 
 
-export default {
-  name: "compound-governance-widget",
-
-  initialize() {
-    if (!window.location.pathname.includes("/t/")) return;
-
-    console.log("📌 Topic page detected, fixing scroll...");
-
-    setTimeout(() => {
-      const cleanUrl =
-        window.location.pathname + window.location.search;
-
-      window.history.replaceState({}, document.title, cleanUrl);
-
-      window.scrollTo({
-        top: 0,
-        left: 0,
-        behavior: "auto",
-      });
-
-      console.log("✅ Scroll fixed to top");
-    }, 150);
-  },
-};
 
 
 console.log("✅ Aave Governance Widget: JavaScript file loaded!");
