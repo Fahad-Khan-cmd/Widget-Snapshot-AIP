@@ -4,8 +4,6 @@ import { apiInitializer } from "discourse/lib/api";
 // SCROLL FIX (Discourse Native API Version)
 // ============================================
 
-import { apiInitializer } from "discourse/lib/api";
-
 export default apiInitializer("1.8.0", (api) => {
   console.log("🔧 [SCROLL FIX] Initialized");
   
