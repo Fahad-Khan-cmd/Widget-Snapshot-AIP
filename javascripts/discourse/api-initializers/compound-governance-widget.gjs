@@ -1,46 +1,31 @@
 import { apiInitializer } from "discourse/lib/api";
 
-// ============================================
-// SCROLL FIX - NO IMPORTS VERSION
-// ============================================
 
-// Self-executing function - no imports needed
-(function() {
-  'use strict';
-  
-  // Wait for Discourse to load
-  setTimeout(function() {
-    function fixScroll() {
-      // Only run on topic pages with anchors
-      const isTopicPage = window.location.pathname.includes('/t/');
-      const hasPostAnchor = window.location.hash && window.location.hash.startsWith('#post-');
+import { on } from "@ember/addon/helpers";
+
+on("did-insert", function() {
+  // Check if it's a topic page
+  if (window.location.pathname.includes("/t/")) {
+    console.log("📌 Topic page detected, fixing scroll...");
+    
+    // Method 1: Fix for Discourse's jump-to-post behavior
+    setTimeout(() => {
+      // Remove any post anchor from URL
+      const cleanUrl = window.location.pathname + window.location.search;
+      window.history.replaceState({}, document.title, cleanUrl);
       
-      if (isTopicPage && hasPostAnchor) {
-        console.log('🔧 Scroll fix: Removing anchor', window.location.hash);
-        
-        // Remove anchor silently
-        history.replaceState(null, '', window.location.pathname + window.location.search);
-        
-        // Scroll to top
-        window.scrollTo(0, 0);
-        
-        console.log('✅ Scroll fixed');
-      }
-    }
-    
-    // Run immediately
-    fixScroll();
-    
-    // Also watch for URL changes (Discourse is a single-page app)
-    const originalPushState = history.pushState;
-    history.pushState = function() {
-      originalPushState.apply(this, arguments);
-      setTimeout(fixScroll, 100);
-    };
-    
-  }, 1000); // Wait 1 second for Discourse to fully load
-})();
-// ============================================
+      // Scroll to top
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: 'auto' // Instant scroll, no animation
+      });
+      
+      console.log("✅ Scroll fixed to top");
+    }, 150); // Slightly longer delay
+  }
+});
+
 
 
 console.log("✅ Aave Governance Widget: JavaScript file loaded!");
