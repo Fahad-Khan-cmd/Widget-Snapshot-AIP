@@ -1,5 +1,17 @@
 import { apiInitializer } from "discourse/lib/api";
 
+export default apiInitializer((api) => {
+
+  api.onPageChange((url) => {
+    if (url.includes("/t/")) {
+      // Topic open → always start from top
+      requestAnimationFrame(() => {
+        window.scrollTo(0, 0);
+      });
+    }
+  });
+
+});
 
 
 console.log("✅ Aave Governance Widget: JavaScript file loaded!");
