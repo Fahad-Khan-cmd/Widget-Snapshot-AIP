@@ -1,6 +1,33 @@
 import { apiInitializer } from "discourse/lib/api";
 
+import { on } from "@ember/addon/helpers";
+
+on("did-insert", function() {
+  // Check if it's a topic page
+  if (window.location.pathname.includes("/t/")) {
+    console.log("📌 Topic page detected, fixing scroll...");
+    
+    // Method 1: Fix for Discourse's jump-to-post behavior
+    setTimeout(() => {
+      // Remove any post anchor from URL
+      const cleanUrl = window.location.pathname + window.location.search;
+      window.history.replaceState({}, document.title, cleanUrl);
+      
+      // Scroll to top
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: 'auto' // Instant scroll, no animation
+      });
+      
+      console.log("✅ Scroll fixed to top");
+    }, 150); // Slightly longer delay
+  }
+});
+
 console.log("✅ Aave Governance Widget: JavaScript file loaded!");
+
+
 
 /**
  * PLATFORM SUPPORT:
