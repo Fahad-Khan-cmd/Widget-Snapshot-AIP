@@ -1,6 +1,43 @@
 import { apiInitializer } from "discourse/lib/api";
 
+// ============================================
+// SCROLL FIX (Discourse Native API Version)
+// ============================================
 
+import { apiInitializer } from "discourse/lib/api";
+
+export default apiInitializer("1.8.0", (api) => {
+  console.log("🔧 [SCROLL FIX] Initialized");
+  
+  api.onPageChange(() => {
+    // Check if it's a topic page
+    if (window.location.pathname.includes("/t/")) {
+      console.log("📌 Topic page detected, fixing scroll...");
+      
+      // Wait a bit for Discourse to load
+      setTimeout(() => {
+        // Check if URL has anchor (#post-4, etc)
+        if (window.location.hash && window.location.hash.startsWith('#post-')) {
+          console.log(`📌 Removing anchor: ${window.location.hash}`);
+          
+          // Remove anchor from URL
+          const cleanUrl = window.location.pathname + window.location.search;
+          window.history.replaceState({}, document.title, cleanUrl);
+          
+          // Scroll to top
+          window.scrollTo({
+            top: 0,
+            left: 0,
+            behavior: 'auto'
+          });
+          
+          console.log("✅ Scroll fixed to top");
+        }
+      }, 200); // 200ms delay
+    }
+  });
+});
+// ============================================
 
 
 console.log("✅ Aave Governance Widget: JavaScript file loaded!");
