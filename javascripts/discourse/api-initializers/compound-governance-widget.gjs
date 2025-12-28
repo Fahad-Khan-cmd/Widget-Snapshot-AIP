@@ -1,40 +1,45 @@
 import { apiInitializer } from "discourse/lib/api";
 
 // ============================================
-// SCROLL FIX (Discourse Native API Version)
+// SCROLL FIX - NO IMPORTS VERSION
 // ============================================
 
-export default apiInitializer("1.8.0", (api) => {
-  console.log("🔧 [SCROLL FIX] Initialized");
+// Self-executing function - no imports needed
+(function() {
+  'use strict';
   
-  api.onPageChange(() => {
-    // Check if it's a topic page
-    if (window.location.pathname.includes("/t/")) {
-      console.log("📌 Topic page detected, fixing scroll...");
+  // Wait for Discourse to load
+  setTimeout(function() {
+    function fixScroll() {
+      // Only run on topic pages with anchors
+      const isTopicPage = window.location.pathname.includes('/t/');
+      const hasPostAnchor = window.location.hash && window.location.hash.startsWith('#post-');
       
-      // Wait a bit for Discourse to load
-      setTimeout(() => {
-        // Check if URL has anchor (#post-4, etc)
-        if (window.location.hash && window.location.hash.startsWith('#post-')) {
-          console.log(`📌 Removing anchor: ${window.location.hash}`);
-          
-          // Remove anchor from URL
-          const cleanUrl = window.location.pathname + window.location.search;
-          window.history.replaceState({}, document.title, cleanUrl);
-          
-          // Scroll to top
-          window.scrollTo({
-            top: 0,
-            left: 0,
-            behavior: 'auto'
-          });
-          
-          console.log("✅ Scroll fixed to top");
-        }
-      }, 200); // 200ms delay
+      if (isTopicPage && hasPostAnchor) {
+        console.log('🔧 Scroll fix: Removing anchor', window.location.hash);
+        
+        // Remove anchor silently
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+        
+        // Scroll to top
+        window.scrollTo(0, 0);
+        
+        console.log('✅ Scroll fixed');
+      }
     }
-  });
-});
+    
+    // Run immediately
+    fixScroll();
+    
+    // Also watch for URL changes (Discourse is a single-page app)
+    const originalPushState = history.pushState;
+    history.pushState = function() {
+      originalPushState.apply(this, arguments);
+      setTimeout(fixScroll, 100);
+    };
+    
+  }, 1000); // Wait 1 second for Discourse to fully load
+})();
 // ============================================
 
 
