@@ -1,35 +1,30 @@
 import { apiInitializer } from "discourse/lib/api";
 
-import Component from "@glimmer/component";
-import { action } from "@ember/object";
 
-export default class CompoundGovernanceWidget extends Component {
-  @action
-  fixScroll() {
-    if (window.location.pathname.includes("/t/")) {
-      console.log("📌 Topic page detected, fixing scroll...");
+export default {
+  name: "compound-governance-widget",
 
-      setTimeout(() => {
-        const cleanUrl =
-          window.location.pathname + window.location.search;
+  initialize() {
+    if (!window.location.pathname.includes("/t/")) return;
 
-        window.history.replaceState({}, document.title, cleanUrl);
+    console.log("📌 Topic page detected, fixing scroll...");
 
-        window.scrollTo({
-          top: 0,
-          left: 0,
-          behavior: "auto",
-        });
+    setTimeout(() => {
+      const cleanUrl =
+        window.location.pathname + window.location.search;
 
-        console.log("✅ Scroll fixed to top");
-      }, 150);
-    }
-  }
-}
+      window.history.replaceState({}, document.title, cleanUrl);
 
-<template>
-  <div {{did-insert this.fixScroll}}></div>
-</template>
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
+      });
+
+      console.log("✅ Scroll fixed to top");
+    }, 150);
+  },
+};
 
 
 console.log("✅ Aave Governance Widget: JavaScript file loaded!");
