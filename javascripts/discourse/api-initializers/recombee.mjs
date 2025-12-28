@@ -22,17 +22,17 @@ const SUBGRAPH_URL = `https://gateway.thegraph.com/api/${GRAPH_API_KEY}/subgraph
 // on-chain proposal IDs, or the subgraph might be indexing a different contract
 const AAVE_GOVERNANCE_V3_CONTRACTS = {
   ethereum: {
-    address: process.env.address,
+    address: "0xEC568fffba86c094cf06b22134B23074DFE2252c",
     rpc: "https://eth.llamarpc.com",
     name: "Ethereum Mainnet",
   },
   polygon: {
-    address: process.env.address, // Same address on Polygon
+    address: "0xEC568fffba86c094cf06b22134B23074DFE2252c", // Same address on Polygon
     rpc: "https://polygon-rpc.com", // Public Polygon RPC
     name: "Polygon",
   },
   avalanche: {
-    address: process.env.address, // Same address on Avalanche
+    address: "0xEC568fffba86c094cf06b22134B23074DFE2252c", // Same address on Avalanche
     rpc: "https://api.avax.network/ext/bc/C/rpc", // Public Avalanche RPC
     name: "Avalanche",
   },
