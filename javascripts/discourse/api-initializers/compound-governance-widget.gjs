@@ -11712,48 +11712,37 @@ if (isTopicPage) {
 
   // Re-initialize topic widget on page changes
   // -------------------- xyz ---------------------------
+
+// Re-initialize topic widget on page changes
 api.onPageChange(() => {
-  // Reset current proposal so we can detect the first one again
   currentVisibleProposal = null;
 
   const path = window.location.pathname;
 
-  // ==========================================
-  // 🔒 Remove /postNumber to prevent auto-scroll
-  // ==========================================
+  // Remove /postNumber from URL
   const postMatch = path.match(/^(\/t\/[^\/]+\/\d+)\/\d+$/);
   if (postMatch) {
     const cleanPath = postMatch[1];
     window.history.replaceState({}, "", cleanPath);
-    console.log("🟢 [TOPIC] Removed post number from URL:", cleanPath);
-
-    // Ensure scroll stays at top
     window.scrollTo(0, 0);
+    console.log("🟢 [TOPIC] Removed post number from URL:", cleanPath);
   }
 
-  // ==========================================
   // Clean up widgets if not on a topic page
-  // ==========================================
-  const isTopicPage = window.location.pathname.match(/^\/t\//);
+  const isTopicPage = /^\/t\//.test(path);
   if (!isTopicPage) {
     console.log("🔍 [TOPIC] Page changed to non-topic page - cleaning up widgets");
-
-    const allWidgets = document.querySelectorAll('.tally-status-widget-container');
-    allWidgets.forEach(widget => widget.remove());
-
+    document.querySelectorAll('.tally-status-widget-container').forEach(w => w.remove());
     const container = document.getElementById('governance-widgets-wrapper');
     if (container) container.remove();
-
     widgetSetupCompleted = false;
     currentTopicId = null;
     return;
   }
 
-  // ==========================================
   // Detect topic change
-  // ==========================================
-  const topicMatch = window.location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
-  const newTopicId = topicMatch ? topicMatch[1] : window.location.pathname;
+  const topicMatch = path.match(/^\/t\/[^\/]+\/(\d+)/);
+  const newTopicId = topicMatch ? topicMatch[1] : path;
 
   if (currentTopicId && currentTopicId === newTopicId) {
     console.log(`🔵 [TOPIC] Same topic (${newTopicId}) - preserving widgets`);
@@ -11762,11 +11751,10 @@ api.onPageChange(() => {
     return;
   }
 
-  if (currentTopicId !== newTopicId) {
-    console.log(`🔵 [TOPIC] Topic changed from ${currentTopicId} to ${newTopicId} - will re-initialize widgets`);
-    widgetSetupCompleted = false;
-    currentTopicId = newTopicId;
-  }
+  // Topic changed
+  console.log(`🔵 [TOPIC] Topic changed from ${currentTopicId} to ${newTopicId} - will re-initialize widgets`);
+  widgetSetupCompleted = false;
+  currentTopicId = newTopicId;
 
   // Initialize widgets
   setupTopicWatcher();
