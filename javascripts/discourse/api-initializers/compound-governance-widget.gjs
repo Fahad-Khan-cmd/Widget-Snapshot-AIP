@@ -1,6 +1,46 @@
 import { apiInitializer } from "discourse/lib/api";
 
 
+// ------------------------------
+// FIX: remove /postNumber from topic list links
+// ------------------------------
+function cleanTopicLinks(root = document) {
+  const links = root.querySelectorAll("a.raw-topic-link");
+
+  links.forEach(link => {
+    const href = link.getAttribute("href");
+    if (!href) return;
+
+    const match = href.match(/^(\/t\/[^\/]+\/\d+)\/\d+$/);
+    if (!match) return;
+
+    link.setAttribute("href", match[1]);
+  });
+}
+
+// Run once
+document.addEventListener("DOMContentLoaded", () => {
+  cleanTopicLinks();
+});
+
+// Watch for Discourse re-renders
+const topicLinkObserver = new MutationObserver(mutations => {
+  mutations.forEach(m => {
+    m.addedNodes.forEach(node => {
+      if (node.nodeType === 1) {
+        cleanTopicLinks(node);
+      }
+    });
+  });
+});
+
+topicLinkObserver.observe(document.body, {
+  childList: true,
+  subtree: true
+});
+
+
+
 console.log("✅ Aave Governance Widget: JavaScript file loaded!");
 let topicWatcher = null;
 let globalComposerObserver = null;
@@ -11710,30 +11750,6 @@ function getCurrentForumTopicUrl() {
 
   // Re-initialize topic widget on page changes
   
-// =====================================================
-// 🔒 STOP /t/slug/id/10 FROM EVER HAPPENING (ROOT FIX)
-// =====================================================
-document.addEventListener("click", (e) => {
-  const link = e.target.closest("a.raw-topic-link");
-  if (!link) return;
-
-  const href = link.getAttribute("href");
-  if (!href) return;
-
-  // Match /t/slug/id/number
-  const match = href.match(/^(\/t\/[^\/]+\/\d+)\/\d+$/);
-  if (match) {
-    e.preventDefault();
-
-    const cleanPath = match[1];
-    history.pushState({}, "", cleanPath);
-
-    // Kill scroll jump immediately
-    requestAnimationFrame(() => window.scrollTo(0, 0));
-
-    console.log("🟢 [HIJACK] Clean topic URL:", cleanPath);
-  }
-});
 
 
 // =====================================================
