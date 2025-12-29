@@ -111,45 +111,6 @@ console.log("✅ Aave Governance Widget: JavaScript file loaded!");
   
   console.log("✅ Aave Governance Widget: apiInitializer called!");
 
-   
-  // CRITICAL: Also prevent scrolling when widgets are added to DOM via MutationObserver
-  // This catches any scroll events triggered by DOM changes
-  const scrollPreventionObserver = new MutationObserver((mutations) => {
-    // Check if widgets are being added
-    const hasWidgetAddition = mutations.some(mutation => {
-      return Array.from(mutation.addedNodes).some(node => {
-        if (node.nodeType === 1) { // Element node
-          return node.classList?.contains('tally-status-widget-container') ||
-                 node.classList?.contains('governance-widgets-wrapper') ||
-                 node.querySelector?.('.tally-status-widget-container') ||
-                 node.querySelector?.('.governance-widgets-wrapper');
-        }
-        return false;
-      });
-    });
-    
-    if (hasWidgetAddition) {
-      widgetsInserting = true;
-      scrollRestoreOnMutation();
-      // Keep preventing scroll for 500ms after widget insertion
-      setTimeout(() => {
-        widgetsInserting = false;
-      }, 500);
-    }
-    
-    if (scrollLocked || widgetsInserting) {
-      scrollRestoreOnMutation();
-    }
-  });
-  
-  // Observe document body for widget additions
-  if (document.body) {
-    scrollPreventionObserver.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-  }
-
   // Track errors that are being handled to avoid false positives in unhandled rejection handler
   const handledErrors = new WeakSet();
   
