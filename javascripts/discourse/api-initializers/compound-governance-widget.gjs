@@ -11696,49 +11696,65 @@ function getOrCreateWidgetsContainer() {
   }
 
   // Re-initialize topic widget on page changes
-  api.onPageChange(() => {
-    // Reset current proposal so we can detect the first one again
-    currentVisibleProposal = null;
+  function cleanupWatchersAndListeners() {
+  // Clean up any mutation observers
+  if (topicWatcher && topicWatcher.disconnect) {
+    topicWatcher.disconnect();
+  }
+  // Remove any global event listeners
+  // ...
+}
+ api.onPageChange(() => {
+  // Reset current proposal so we can detect the first one again
+  currentVisibleProposal = null;
+  
+  // Extract topic ID with better regex
+  const topicMatch = window.location.pathname.match(/^\/t\/(?:[^\/]+\/)?(\d+)/);
+  const newTopicId = topicMatch ? topicMatch[1] : null;
+  const isTopicPage = !!newTopicId;
+  
+  // Store previous topic for comparison
+  const previousTopicId = currentTopicId;
+  
+  // Always clean up previous listeners/observers first
+  cleanupWatchersAndListeners(); // You need to implement this
+  
+  if (!isTopicPage) {
+    console.log("🔍 [TOPIC] Page changed to non-topic page - cleaning up widgets");
+    // Remove all widgets and container
+    const allWidgets = document.querySelectorAll('.tally-status-widget-container');
+    allWidgets.forEach(widget => widget.remove());
+    const container = document.getElementById('governance-widgets-wrapper');
+    if (container) container.remove();
     
-    // CRITICAL: Clean up widgets if we're not on a topic page
-    const isTopicPage = window.location.pathname.match(/^\/t\//);
-    if (!isTopicPage) {
-      console.log("🔍 [TOPIC] Page changed to non-topic page - cleaning up widgets");
-      // Remove all widgets and container
-      const allWidgets = document.querySelectorAll('.tally-status-widget-container');
-      allWidgets.forEach(widget => widget.remove());
-      const container = document.getElementById('governance-widgets-wrapper');
-      if (container) {
-        container.remove();
-      }
-      // Reset topic tracking
-      widgetSetupCompleted = false;
-      currentTopicId = null;
-      return;
-    }
-    
-    // CRITICAL: Check if we're navigating to a different topic
-    // If same topic, preserve widgets to prevent blinking
-    const topicMatch = window.location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
-    const newTopicId = topicMatch ? topicMatch[1] : window.location.pathname;
-    
-    if (currentTopicId && currentTopicId === newTopicId) {
-      console.log(`🔵 [TOPIC] Same topic (${newTopicId}) - preserving widgets to prevent blinking`);
-      // Same topic - just ensure watcher is set up, but don't re-initialize widgets
-      setupTopicWatcher();
-      setupGlobalComposerDetection();
-      return;
-    }
-    
-    // Different topic - reset flags to allow fresh widget setup
-    if (currentTopicId !== newTopicId) {
-      console.log(`🔵 [TOPIC] Topic changed from ${currentTopicId} to ${newTopicId} - will re-initialize widgets`);
-      widgetSetupCompleted = false;
-      currentTopicId = newTopicId;
-    }
-    
-    // Initialize immediately - no setTimeout delay
+    // Reset all tracking
+    widgetSetupCompleted = false;
+    currentTopicId = null;
+    return;
+  }
+  
+  // Now we know we're on a topic page
+  currentTopicId = newTopicId;
+  
+  // Check if we're actually on the same topic (considering string/number types)
+  const isSameTopic = previousTopicId && previousTopicId.toString() === newTopicId.toString();
+  
+  if (isSameTopic && widgetSetupCompleted) {
+    console.log(`🔵 [TOPIC] Same topic (${newTopicId}) - preserving widgets`);
+    // Re-setup watchers for same topic
     setupTopicWatcher();
     setupGlobalComposerDetection();
-  });
+    return;
+  }
+  
+  // Different topic or widgets not set up
+  console.log(`🔵 [TOPIC] ${previousTopicId ? 'Topic changed' : 'New topic'} (${newTopicId}) - initializing widgets`);
+  widgetSetupCompleted = false;
+  
+  // Initialize with a small delay to ensure DOM is ready
+  setTimeout(() => {
+    setupTopicWatcher();
+    setupGlobalComposerDetection();
+  }, 100);
+});
 });
