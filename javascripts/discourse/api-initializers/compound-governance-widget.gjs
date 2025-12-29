@@ -11695,16 +11695,33 @@ function getOrCreateWidgetsContainer() {
     startWidgetInitialization();
   }
 
-  // Re-initialize topic widget on page changes
+  let currentVisibleProposal = null;
+let widgetSetupCompleted = false;
+let currentTopicId = null;
+let topicWatcher = null; // Add this
+let globalComposerObserver = null; // Add this if you have composer detection
+
   function cleanupWatchersAndListeners() {
   // Clean up any mutation observers
-  if (topicWatcher && topicWatcher.disconnect) {
+  if (topicWatcher && typeof topicWatcher.disconnect === 'function') {
+    console.log("🧹 [TOPIC] Disconnecting topic watcher");
     topicWatcher.disconnect();
+    topicWatcher = null;
   }
-  // Remove any global event listeners
-  // ...
+  
+  // Clean up global composer observer if it exists
+  if (globalComposerObserver && typeof globalComposerObserver.disconnect === 'function') {
+    console.log("🧹 [TOPIC] Disconnecting global composer observer");
+    globalComposerObserver.disconnect();
+    globalComposerObserver = null;
+  }
+  
+  // Remove any global event listeners you might have added
+  // Example:
+  // document.removeEventListener('click', yourClickHandler);
 }
- api.onPageChange(() => {
+
+api.onPageChange(() => {
   // Reset current proposal so we can detect the first one again
   currentVisibleProposal = null;
   
@@ -11717,7 +11734,7 @@ function getOrCreateWidgetsContainer() {
   const previousTopicId = currentTopicId;
   
   // Always clean up previous listeners/observers first
-  cleanupWatchersAndListeners(); // You need to implement this
+  cleanupWatchersAndListeners();
   
   if (!isTopicPage) {
     console.log("🔍 [TOPIC] Page changed to non-topic page - cleaning up widgets");
@@ -11757,4 +11774,38 @@ function getOrCreateWidgetsContainer() {
     setupGlobalComposerDetection();
   }, 100);
 });
+
+// Also need to modify your setupTopicWatcher function to use the topicWatcher variable:
+function setupTopicWatcher() {
+  // Clean up existing watcher if it exists
+  if (topicWatcher && typeof topicWatcher.disconnect === 'function') {
+    topicWatcher.disconnect();
+  }
+  
+  // Create new mutation observer
+  topicWatcher = new MutationObserver((mutations) => {
+    // Your mutation observer logic here
+  });
+  
+  // Start observing
+  topicWatcher.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+  
+  console.log("👀 [TOPIC] Topic watcher initialized");
+}
+
+// If you have a setupGlobalComposerDetection function, modify it similarly:
+function setupGlobalComposerDetection() {
+  // Clean up existing observer if it exists
+  if (globalComposerObserver && typeof globalComposerObserver.disconnect === 'function') {
+    globalComposerObserver.disconnect();
+  }
+  
+  // Create new observer if needed
+  // globalComposerObserver = new MutationObserver(...);
+  
+  console.log("👀 [TOPIC] Global composer detection initialized");
+}
 });
