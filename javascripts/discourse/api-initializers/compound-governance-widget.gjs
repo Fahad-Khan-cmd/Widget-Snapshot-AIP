@@ -11710,6 +11710,35 @@ function getCurrentForumTopicUrl() {
 
   // Re-initialize topic widget on page changes
   
+// =====================================================
+// 🔒 STOP /t/slug/id/10 FROM EVER HAPPENING (ROOT FIX)
+// =====================================================
+document.addEventListener("click", (e) => {
+  const link = e.target.closest("a.raw-topic-link");
+  if (!link) return;
+
+  const href = link.getAttribute("href");
+  if (!href) return;
+
+  // Match /t/slug/id/number
+  const match = href.match(/^(\/t\/[^\/]+\/\d+)\/\d+$/);
+  if (match) {
+    e.preventDefault();
+
+    const cleanPath = match[1];
+    history.pushState({}, "", cleanPath);
+
+    // Kill scroll jump immediately
+    requestAnimationFrame(() => window.scrollTo(0, 0));
+
+    console.log("🟢 [HIJACK] Clean topic URL:", cleanPath);
+  }
+});
+
+
+// =====================================================
+// 🧠 PAGE CHANGE HANDLER (BACKUP + WIDGET LOGIC)
+// =====================================================
 api.onPageChange(() => {
   // Reset current proposal
   currentVisibleProposal = null;
@@ -11717,13 +11746,12 @@ api.onPageChange(() => {
   const path = window.location.pathname;
 
   // ------------------------------------------
-  // 🔒 Remove /postNumber to prevent auto-scroll
+  // 🔒 Remove /postNumber (safety net)
   // ------------------------------------------
   const postMatch = path.match(/^(\/t\/[^\/]+\/\d+)\/\d+/);
   if (postMatch) {
     const cleanPath = postMatch[1];
-    window.history.replaceState({}, "", cleanPath);
-    // Force scroll to top
+    history.replaceState({}, "", cleanPath);
     window.scrollTo(0, 0);
     console.log("🟢 [TOPIC] Removed post number from URL:", cleanPath);
   }
@@ -11734,19 +11762,21 @@ api.onPageChange(() => {
   if (window.location.hash.startsWith("#post-")) {
     history.replaceState(null, "", window.location.pathname);
     window.scrollTo(0, 0);
-    console.log("🟢 [TOPIC] Removed hash fragment and reset scroll");
+    console.log("🟢 [TOPIC] Removed hash fragment");
   }
 
   // ------------------------------------------
-  // Clean up widgets if not on a topic page
+  // Clean up widgets if not on topic page
   // ------------------------------------------
   const isTopicPage = /^\/t\//.test(path);
   if (!isTopicPage) {
     console.log("🔍 [TOPIC] Non-topic page - cleaning up widgets");
 
-    document.querySelectorAll('.tally-status-widget-container').forEach(w => w.remove());
+    document
+      .querySelectorAll(".tally-status-widget-container")
+      .forEach(w => w.remove());
 
-    const container = document.getElementById('governance-widgets-wrapper');
+    const container = document.getElementById("governance-widgets-wrapper");
     if (container) container.remove();
 
     widgetSetupCompleted = false;
@@ -11761,22 +11791,19 @@ api.onPageChange(() => {
   const newTopicId = topicMatch ? topicMatch[1] : path;
 
   if (currentTopicId && currentTopicId === newTopicId) {
-    console.log(`🔵 [TOPIC] Same topic (${newTopicId}) - preserving widgets`);
+    console.log(`🔵 [TOPIC] Same topic (${newTopicId})`);
     setupTopicWatcher();
     setupGlobalComposerDetection();
     return;
   }
 
-  // Topic changed - reinitialize widgets
-  console.log(`🔵 [TOPIC] Topic changed from ${currentTopicId} to ${newTopicId}`);
+  console.log(`🔵 [TOPIC] Topic changed to ${newTopicId}`);
   widgetSetupCompleted = false;
   currentTopicId = newTopicId;
 
-  // Initialize widgets
   setupTopicWatcher();
   setupGlobalComposerDetection();
 });
-
 
 });
 
