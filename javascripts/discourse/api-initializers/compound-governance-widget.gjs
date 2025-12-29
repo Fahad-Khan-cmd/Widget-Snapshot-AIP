@@ -7137,6 +7137,53 @@ function getOrCreateWidgetsContainer() {
 
  // ----------------------- XYZ topicurl----
 
+function getCurrentForumTopicUrl() {
+    try {
+      const currentUrl = window.location.href;
+      const pathname = window.location.pathname;
+      
+      // Check if we're on a Discourse topic page (pattern: /t/{slug}/{id})
+      // This works on any Discourse forum, not just governance.aave.com
+      const topicMatch = pathname.match(/^\/t\/([^\/]+)\/(\d+)/);
+      if (topicMatch) {
+        // Extract the base URL (protocol + host)
+        const baseUrl = `${window.location.protocol}//${window.location.host}`;
+        const slug = topicMatch[1];
+        const topicId = topicMatch[2];
+        
+        // Construct forum topic URL and normalize it
+        const forumUrl = `${baseUrl}/t/${slug}/${topicId}`;
+        const normalized = normalizeForumUrl(forumUrl);
+        if (normalized) {
+          console.log(`🔵 [VALIDATE] Current forum topic URL: ${normalized}`);
+          return normalized;
+        }
+        // Fallback to non-normalized if normalization fails
+        console.log(`🔵 [VALIDATE] Current forum topic URL (fallback): ${forumUrl}`);
+        return forumUrl;
+      }
+      
+      // Fallback: Check for governance.aave.com specifically (for backward compatibility)
+      const forumMatch = currentUrl.match(/https?:\/\/(?:www\.)?governance\.aave\.com\/t\/[^\s<>"']+/i);
+      if (forumMatch) {
+        const forumUrl = forumMatch[0];
+        // Normalize URL using normalizeForumUrl
+
+        const normalized = normalizeForumUrl(forumUrl);
+        if (normalized) {
+          console.log(`🔵 [VALIDATE] Current forum topic URL (legacy, normalized): ${normalized}`);
+          return normalized;
+        }
+        // Fallback to simple normalization if normalizeForumUrl fails
+        const simpleNormalized = forumUrl.replace(/[\/#\?].*$/, '').replace(/\/$/, '');
+        console.log(`🔵 [VALIDATE] Current forum topic URL (legacy, simple): ${simpleNormalized}`);
+        return simpleNormalized;
+      }
+    } catch (error) {
+      console.warn(`⚠️ [VALIDATE] Error getting current forum URL:`, error);
+    }
+    return null;
+  }
 
 
 
@@ -11669,25 +11716,36 @@ api.onPageChange(() => {
 
   const path = window.location.pathname;
 
-  // ==========================================
-  // 🔒 Remove /postNumber to prevent auto-scroll (BEST FEATURE)
-  // ==========================================
-  const postMatch = path.match(/^(\/t\/[^\/]+\/\d+)\/\d+$/);
+  // ------------------------------------------
+  // 🔒 Remove /postNumber to prevent auto-scroll
+  // ------------------------------------------
+  const postMatch = path.match(/^(\/t\/[^\/]+\/\d+)\/\d+/);
   if (postMatch) {
     const cleanPath = postMatch[1];
     window.history.replaceState({}, "", cleanPath);
-    // Ensure scroll stays at top
+    // Force scroll to top
     window.scrollTo(0, 0);
     console.log("🟢 [TOPIC] Removed post number from URL:", cleanPath);
   }
 
-  // ==========================================
+  // ------------------------------------------
+  // Remove hash fragment (#post-*)
+  // ------------------------------------------
+  if (window.location.hash.startsWith("#post-")) {
+    history.replaceState(null, "", window.location.pathname);
+    window.scrollTo(0, 0);
+    console.log("🟢 [TOPIC] Removed hash fragment and reset scroll");
+  }
+
+  // ------------------------------------------
   // Clean up widgets if not on a topic page
-  // ==========================================
+  // ------------------------------------------
   const isTopicPage = /^\/t\//.test(path);
   if (!isTopicPage) {
     console.log("🔍 [TOPIC] Non-topic page - cleaning up widgets");
+
     document.querySelectorAll('.tally-status-widget-container').forEach(w => w.remove());
+
     const container = document.getElementById('governance-widgets-wrapper');
     if (container) container.remove();
 
@@ -11696,9 +11754,9 @@ api.onPageChange(() => {
     return;
   }
 
-  // ==========================================
+  // ------------------------------------------
   // Detect topic change
-  // ==========================================
+  // ------------------------------------------
   const topicMatch = path.match(/^\/t\/[^\/]+\/(\d+)/);
   const newTopicId = topicMatch ? topicMatch[1] : path;
 
@@ -11718,6 +11776,8 @@ api.onPageChange(() => {
   setupTopicWatcher();
   setupGlobalComposerDetection();
 });
+
+
 });
 
 
