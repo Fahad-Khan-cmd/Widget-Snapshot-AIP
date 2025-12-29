@@ -34,75 +34,29 @@ console.log("✅ Aave Governance Widget: JavaScript file loaded!");
  */
 
 export default apiInitializer((api) => {
-  // CRITICAL: Force scroll to top (0, 0) on page load
-  // User wants to stay at top, no auto-scroll to proposals
-  // This prevents Discourse from auto-scrolling to posts/proposals
-  let initialScrollX = 0;
-  let initialScrollY = 0;
-  
-  // Immediately force scroll to top
-  window.scrollTo(0, 0);
-  document.documentElement.scrollLeft = 0;
-  document.documentElement.scrollTop = 0;
-  document.body.scrollLeft = 0;
-  document.body.scrollTop = 0;
-  
-  // Lock scroll position during initial widget setup to prevent auto-scrolling
-  let scrollLocked = true;
-  let widgetsInserting = false; // Track when widgets are being inserted
-  
-  const restoreScroll = () => {
-    if (scrollLocked || widgetsInserting) {
-      // Always restore to top (0, 0) - user wants to stay at top
-      window.scrollTo(0, 0);
-      document.documentElement.scrollLeft = 0;
-      document.documentElement.scrollTop = 0;
-      document.body.scrollLeft = 0;
-      document.body.scrollTop = 0;
-    }
-  };
-  
-  const lockScrollUntilWidgetsReady = () => {
-    // Stop locking after widgets are ready (reduced to 500ms to allow immediate scrolling)
-    // Note: We rely on MutationObserver and scroll event listener instead of fixed intervals
-    setTimeout(() => {
-      scrollLocked = false;
-      // Final restore to top
-      restoreScroll();
-    }, 500);
-  };
-  
-  // Start scroll locking immediately
-  lockScrollUntilWidgetsReady();
-  
-  // CRITICAL: Aggressively restore scroll position on any scroll event during lock/insertion
-  // This prevents Discourse or browser from auto-scrolling to widgets or posts
-  const aggressiveScrollRestore = (e) => {
-    if (scrollLocked || widgetsInserting) {
-      // Prevent default scroll behavior and force to top
-      if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-      restoreScroll();
-    }
-  };
-  
-  // Listen for scroll events and restore position if locked (non-passive to allow preventDefault)
-  window.addEventListener('scroll', aggressiveScrollRestore, { passive: false, capture: true });
-  
-  // Also restore on any DOM mutations that might trigger scrolling
-  const scrollRestoreOnMutation = () => {
-    if (scrollLocked || widgetsInserting) {
-      // Use multiple methods to ensure scroll is restored
+  api.onPageChange((url, title) => {
+    // Only apply on topic pages
+    if (!url.startsWith("/t/")) return;
+
+    // Let Discourse finish its internal scroll first
+    requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        restoreScroll();
-        setTimeout(() => restoreScroll(), 0);
-        setTimeout(() => restoreScroll(), 10);
-        setTimeout(() => restoreScroll(), 50);
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: "auto",
+        });
       });
-    }
-  };
+    });
+
+    // Extra safety for slow renders
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 150);
+  });
+
+  console.log("✅ Topic auto-scroll override enabled");
+});
   
   // ---------------------------- XYZ ------------------
 
