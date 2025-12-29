@@ -2480,7 +2480,6 @@ function renderProposalWidget(container, proposalData, originalUrl) {
     return false;
   }
 
-  ----------Changes-------------
 
   function getEffectiveViewportWidth() {
   return window.visualViewport
