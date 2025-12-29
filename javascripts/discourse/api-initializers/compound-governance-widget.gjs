@@ -1,24 +1,5 @@
 import { apiInitializer } from "discourse/lib/api";
 
-// EXTREME SIMPLE VERSION
-(function() {
-  // Block ALL scrolling completely
-  window.scrollTo = function(x, y) {
-    // Only allow scroll to top (0)
-    if (y === 0) {
-      return this.constructor.prototype.scrollTo.call(window, x, y);
-    }
-    return false;
-  };
-  
-  // Block hash
-  if (window.location.hash) {
-    history.replaceState(null, null, window.location.pathname);
-  }
-  
-  // Force top
-  window.scrollTo(0, 0);
-})();
 
 console.log("✅ Aave Governance Widget: JavaScript file loaded!");
 
