@@ -1,6 +1,44 @@
 import { apiInitializer } from "discourse/lib/api";
 
 
+// ------------------------------
+// FIX: remove /postNumber from topic list links
+// ------------------------------
+function cleanTopicLinks(root = document) {
+  const links = root.querySelectorAll("a.raw-topic-link");
+
+  links.forEach(link => {
+    const href = link.getAttribute("href");
+    if (!href) return;
+
+    const match = href.match(/^(\/t\/[^\/]+\/\d+)\/\d+$/);
+    if (!match) return;
+
+    link.setAttribute("href", match[1]);
+  });
+}
+
+// Run once
+document.addEventListener("DOMContentLoaded", () => {
+  cleanTopicLinks();
+});
+
+// Watch for Discourse re-renders
+const topicLinkObserver = new MutationObserver(mutations => {
+  mutations.forEach(m => {
+    m.addedNodes.forEach(node => {
+      if (node.nodeType === 1) {
+        cleanTopicLinks(node);
+      }
+    });
+  });
+});
+
+topicLinkObserver.observe(document.body, {
+  childList: true,
+  subtree: true
+});
+
 
 
 console.log("✅ Aave Governance Widget: JavaScript file loaded!");
