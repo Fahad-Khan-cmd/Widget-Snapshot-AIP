@@ -11755,7 +11755,7 @@ api.onPageChange(() => {
   setupTopicWatcher();
   setupGlobalComposerDetection();
 });
-
+});
 
 
 
