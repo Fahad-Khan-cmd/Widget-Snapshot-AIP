@@ -2502,79 +2502,58 @@ function renderProposalWidget(container, proposalData, originalUrl) {
   }
 
   // Returns container for large screens (fixed positioning), null for mobile (inline positioning)
-  function getOrCreateWidgetsContainer() {
-    // Check if widget should be inline or fixed based on screen width and sidebar state
-    const shouldInline = shouldShowWidgetInline();
-    if (shouldInline) {
-      console.log("🔵 [CONTAINER] Inline positioning detected - skipping container creation");
-      return null;
-    }
-    
-    let container = document.getElementById('governance-widgets-wrapper');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'governance-widgets-wrapper';
-      container.className = 'governance-widgets-wrapper';
-      container.style.display = 'flex';
-      container.style.flexDirection = 'column';
-      container.style.gap = '16px';
-      container.style.setProperty('position', 'fixed', 'important');
-      container.style.setProperty('z-index', '500', 'important');
-      container.style.setProperty('width', '320px', 'important');
-      container.style.setProperty('max-width', '320px', 'important');
-      container.style.setProperty('max-height', 'calc(100vh - 100px)', 'important');
-      container.style.setProperty('overflow-y', 'auto', 'important');
-      // Ensure container stays visible and fixed during scroll
-      container.style.setProperty('visibility', 'visible', 'important');
-      container.style.setProperty('opacity', '1', 'important');
-      container.style.setProperty('display', 'flex', 'important');
-      // Optimize for fixed positioning
-      container.style.setProperty('will-change', 'transform', 'important');
-      container.style.setProperty('backface-visibility', 'hidden', 'important');
-      container.style.setProperty('transform', 'translateZ(0)', 'important');
-      
-      // Position container like tally widget - fixed on right side
-      updateContainerPosition(container);
-      
-      // CRITICAL: Preserve scroll position when adding container to prevent auto-scrolling
-      preserveScrollPosition(() => {
-        document.body.appendChild(container);
-      });
-      console.log("✅ [CONTAINER] Created widgets container for column layout");
-      
-      // Update position on resize - handles desktop to mobile transitions
-      let updateTimeout;
-      const updatePosition = () => {
-        clearTimeout(updateTimeout);
-        updateTimeout = setTimeout(() => {
-          if (container) {
-            // Ensure container is still in DOM (re-append if needed)
-            if (!container.parentNode) {
-              console.log("🔵 [RESIZE] Container removed from DOM, re-appending...");
-              document.body.appendChild(container);
-            }
-            
-            // Always update position on resize (handles desktop ↔ mobile transitions)
-            // This ensures widget stays visible when switching between screen sizes
-            updateContainerPosition(container);
-            
-            // Also force visibility to prevent disappearing
-            // Use a small delay to ensure DOM is ready after resize
-            setTimeout(() => {
-              ensureAllWidgetsVisible();
-            }, 50);
-          }
-        }, 100);
-      };
-      
-      // Update on resize to handle screen size changes (desktop ↔ mobile)
-      window.addEventListener('resize', updatePosition);
-      
-      // Initial position update after a short delay to ensure DOM is ready
-      setTimeout(() => updateContainerPosition(container), 100);
-    }
-    return container;
+function getOrCreateWidgetsContainer() {
+  if (shouldShowWidgetInline()) {
+    console.log("🔵 [CONTAINER] Inline positioning detected - skipping container creation");
+    return null;
   }
+
+  let container = document.getElementById('governance-widgets-wrapper');
+
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'governance-widgets-wrapper';
+    container.className = 'governance-widgets-wrapper';
+
+    // Core styles
+    const style = container.style;
+    style.setProperty('position', 'fixed', 'important');
+    style.setProperty('z-index', '500', 'important');
+    style.setProperty('width', '320px', 'important');
+    style.setProperty('max-width', '320px', 'important');
+    style.setProperty('max-height', 'calc(100vh - 100px)', 'important');
+    style.setProperty('overflow-y', 'auto', 'important');
+    style.setProperty('flex-direction', 'column', 'important');
+    style.setProperty('display', 'flex', 'important');
+    style.setProperty('gap', '16px', 'important');
+    style.setProperty('will-change', 'transform', 'important');
+    style.setProperty('backface-visibility', 'hidden', 'important');
+    style.setProperty('transform', 'translateZ(0)', 'important');
+
+    preserveScrollPosition(() => {
+      document.body.appendChild(container);
+    });
+
+    // Position container initially
+    setTimeout(() => updateContainerPosition(container), 50);
+
+    // Debounced resize handling
+    let resizeTimeout;
+    const handleResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        if (!container.parentNode) document.body.appendChild(container);
+        updateContainerPosition(container);
+        setTimeout(() => ensureAllWidgetsVisible(), 50);
+      }, 100);
+    };
+
+    window.addEventListener('resize', handleResize);
+  }
+
+  return container;
+}
+
   
   // Update container position - fixed on desktop, relative on mobile/tablet
   // CRITICAL: Only updates position/width when screen size or sidebar state changes, not on every call
