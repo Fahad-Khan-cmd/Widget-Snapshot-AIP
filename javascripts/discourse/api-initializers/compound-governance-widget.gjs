@@ -2483,10 +2483,11 @@ function renderProposalWidget(container, proposalData, originalUrl) {
   // Determine if widget should be inline (top) or fixed (right side)
   function shouldShowWidgetInline() {
   const width = window.innerWidth;
-
-  // Mobile / tablet: always inline
-  if (width < 1480) return true;
-
+if (width >= 1480 && width <= 1780) {
+  const sidebarCollapsed = isSidebarCollapsed();
+  // Fixed if sidebar collapsed, inline if expanded
+  return !sidebarCollapsed;
+}
   // Desktop: always fixed (right)
   return false;
 }
