@@ -7165,6 +7165,7 @@ function getOrCreateWidgetsContainer() {
       if (forumMatch) {
         const forumUrl = forumMatch[0];
         // Normalize URL using normalizeForumUrl
+
         const normalized = normalizeForumUrl(forumUrl);
         if (normalized) {
           console.log(`🔵 [VALIDATE] Current forum topic URL (legacy, normalized): ${normalized}`);
@@ -9758,8 +9759,10 @@ function getOrCreateWidgetsContainer() {
     // This does NOT hide/show widgets based on scroll position
     // Visibility is enforced immediately on every scroll to prevent disappearing
     // Use enhanced scroll handler with continuous visibility checking
-    window.addEventListener('scroll', enhancedHandleScroll, { passive: true });
-    
+
+   // ---------------------- XYZ Scroll ----------------------
+
+
     // CRITICAL: Also handle resize events to ensure widget stays visible when switching screen sizes
     // This prevents widget from disappearing when going from desktop to mobile or vice versa
     let resizeTimeout;
