@@ -11669,36 +11669,25 @@ api.onPageChange(() => {
 
   const path = window.location.pathname;
 
-  // ------------------------------------------
-  // 🔒 Remove /postNumber to prevent auto-scroll
-  // ------------------------------------------
-  const postMatch = path.match(/^(\/t\/[^\/]+\/\d+)\/\d+/);
+  // ==========================================
+  // 🔒 Remove /postNumber to prevent auto-scroll (BEST FEATURE)
+  // ==========================================
+  const postMatch = path.match(/^(\/t\/[^\/]+\/\d+)\/\d+$/);
   if (postMatch) {
     const cleanPath = postMatch[1];
     window.history.replaceState({}, "", cleanPath);
-    // Force scroll to top
+    // Ensure scroll stays at top
     window.scrollTo(0, 0);
     console.log("🟢 [TOPIC] Removed post number from URL:", cleanPath);
   }
 
-  // ------------------------------------------
-  // Remove hash fragment (#post-*)
-  // ------------------------------------------
-  if (window.location.hash.startsWith("#post-")) {
-    history.replaceState(null, "", window.location.pathname);
-    window.scrollTo(0, 0);
-    console.log("🟢 [TOPIC] Removed hash fragment and reset scroll");
-  }
-
-  // ------------------------------------------
+  // ==========================================
   // Clean up widgets if not on a topic page
-  // ------------------------------------------
+  // ==========================================
   const isTopicPage = /^\/t\//.test(path);
   if (!isTopicPage) {
     console.log("🔍 [TOPIC] Non-topic page - cleaning up widgets");
-
     document.querySelectorAll('.tally-status-widget-container').forEach(w => w.remove());
-
     const container = document.getElementById('governance-widgets-wrapper');
     if (container) container.remove();
 
@@ -11707,9 +11696,9 @@ api.onPageChange(() => {
     return;
   }
 
-  // ------------------------------------------
+  // ==========================================
   // Detect topic change
-  // ------------------------------------------
+  // ==========================================
   const topicMatch = path.match(/^\/t\/[^\/]+\/(\d+)/);
   const newTopicId = topicMatch ? topicMatch[1] : path;
 
