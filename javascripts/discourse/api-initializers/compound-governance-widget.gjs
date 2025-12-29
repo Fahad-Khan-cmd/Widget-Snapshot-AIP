@@ -11419,120 +11419,324 @@ function renderProposalWidget(container, proposalData, originalUrl) {
   // Only run on topic pages to prevent widgets from appearing on wrong pages
   // Use immediate initialization like tally widget - no setTimeout delays
 
-  // Initialize immediately when DOM is ready
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initializeWidgets);
-} else {
-  initializeWidgets();
-}
-
-// Main initialization function
-function initializeWidgets() {
-  const path = window.location.pathname;
-  const isTopicPage = path.match(/^\/t\//);
-  
-  if (!isTopicPage) {
-    console.log("🔍 [INIT] Not on a topic page - skipping widget setup");
-    cleanupWidgets();
-    return;
-  }
-  
-  // Extract topic ID
-  const topicMatch = path.match(/^\/t\/[^\/]+\/(\d+)/);
-  const newTopicId = topicMatch ? topicMatch[1] : path;
-  
-  // If same topic, preserve widgets (prevent blinking)
-  if (window.currentTopicId === newTopicId && window.widgetsInitialized) {
-    console.log(`🔵 [INIT] Same topic (${newTopicId}) - preserving widgets`);
-    return;
-  }
-  
-  // Clean up previous widgets
-  cleanupWidgets();
-  
-  // Store current topic
-  window.currentTopicId = newTopicId;
-  
-  // Initialize widgets with a small delay to let page settle
-  setTimeout(() => {
-    setupTopicWidgets();
-    setupGlobalComposerDetection();
-    window.widgetsInitialized = true;
-    console.log(`✅ [INIT] Widgets initialized for topic: ${newTopicId}`);
-  }, 100);
-}
-
-// Cleanup function
-function cleanupWidgets() {
-  // Remove all widgets and container
-  document.querySelectorAll('.tally-status-widget-container').forEach(w => w.remove());
-  document.getElementById('governance-widgets-wrapper')?.remove();
-  
-  // Clear intervals
-  if (window._aipVisibilityInterval) {
-    clearInterval(window._aipVisibilityInterval);
-    window._aipVisibilityInterval = null;
-  }
-  
-  // Disconnect observers
-  if (window._widgetObserver) {
-    window._widgetObserver.disconnect();
-    window._widgetObserver = null;
-  }
-  
-  // Reset state
-  window.widgetsInitialized = false;
-  window.currentTopicId = null;
-  window.currentVisibleProposal = null;
-}
-
-// Re-initialize on page changes (FIXED VERSION)
-api.onPageChange(() => {
-  console.log("🔄 [PAGE CHANGE] Detected page change");
-  
-  // Use a debouncer to prevent multiple rapid calls
-  if (window.pageChangeTimeout) {
-    clearTimeout(window.pageChangeTimeout);
-  }
-  
-  window.pageChangeTimeout = setTimeout(() => {
-    initializeWidgets();
-  }, 50); // Small delay to let Discourse settle
-});
-
-// Prevent anchor scroll in topic URLs
-function preventAnchorScroll() {
-  const currentUrl = window.location.href;
-  if (currentUrl.includes('#')) {
-    // Remove anchor from URL without reloading
-    const cleanUrl = currentUrl.split('#')[0];
-    window.history.replaceState(null, null, cleanUrl);
-  }
-}
-
-// Call this during initialization
-preventAnchorScroll();
-
-// Simplified setupTopicWatcher function
-function setupTopicWatcher() {
-  // Clear any existing intervals first
-  if (window.topicWatcherInterval) {
-    clearInterval(window.topicWatcherInterval);
-  }
-  
-  // Only set up a single, less aggressive watcher
-  window.topicWatcherInterval = setInterval(() => {
-    // Your widget detection logic here
-    const widgets = document.querySelectorAll('.tally-status-widget-container');
+  function startWidgetInitialization() {
+    const isTopicPage = window.location.pathname.match(/^\/t\//);
+    if (isTopicPage) {
+      setupTopicWatcher();
+    } else {
+      console.log("🔍 [TOPIC] Not on a topic page - skipping topic widget initialization");
+    }
     
-    if (widgets.length > 0) {
-      // Only apply minimal styling if needed
-      widgets.forEach(widget => {
-        if (window.getComputedStyle(widget).display === 'none') {
-          widget.style.display = 'block';
+    // Watch for widgets being added to DOM and immediately force visibility (works on all devices)
+    // CRITICAL: Only process widgets on topic pages - remove widgets on non-topic pages
+    // Also watch for widgets being REMOVED and prevent removal if on topic page
+    let isRestoring = false; // Flag to prevent infinite loops
+    let lastRestoreTime = 0; // Track last restore time for debouncing
+    const RESTORE_DEBOUNCE_MS = 500; // Minimum time between restorations
+    const restoredNodes = new WeakSet(); // Track nodes we've restored to prevent loops
+    
+    const widgetObserver = new MutationObserver((mutations) => {
+      const isCurrentTopicPage = window.location.pathname.match(/^\/t\//);
+      
+      // If not on topic page, remove any widgets that get added
+      if (!isCurrentTopicPage) {
+        mutations.forEach((mutation) => {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const widgets = node.classList?.contains('tally-status-widget-container') 
+                ? [node] 
+                : node.querySelectorAll?.('.tally-status-widget-container') || [];
+              widgets.forEach((widget) => widget.remove());
+              // Also check if node itself is the container
+              if (node.id === 'governance-widgets-wrapper') {
+                node.remove();
+              }
+            }
+          });
+        });
+        // Also clean up any existing widgets and container
+        const allWidgets = document.querySelectorAll('.tally-status-widget-container');
+        allWidgets.forEach(widget => widget.remove());
+        const container = document.getElementById('governance-widgets-wrapper');
+        if (container) {
+          container.remove();
+        }
+        return;
+      }
+      
+      // On topic page: watch for widgets being removed and prevent it
+      // CRITICAL: Prevent infinite loops by checking if we're already restoring
+      if (isRestoring) {
+        return; // Skip processing if we're currently restoring
+      }
+      
+      mutations.forEach((mutation) => {
+        // CRITICAL: Watch for widgets being removed from DOM and prevent it if on topic page
+        if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
+          mutation.removedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              // Check if this is a widget or container
+              const isWidget = node.classList?.contains('tally-status-widget-container');
+              const isContainer = node.classList?.contains('governance-widgets-wrapper');
+              
+              if (isWidget || isContainer) {
+                // Check if node is already in DOM (might have been moved, not removed)
+                if (node.parentNode) {
+                  return; // Node is still in DOM, skip
+                }
+                
+                // Check if we've already restored this node recently
+                if (restoredNodes.has(node)) {
+                  const now = Date.now();
+                  if (now - lastRestoreTime < RESTORE_DEBOUNCE_MS) {
+                    return; // Too soon since last restore, skip
+                  }
+                }
+                
+                // Debounce: only restore if enough time has passed
+                const now = Date.now();
+                if (now - lastRestoreTime < RESTORE_DEBOUNCE_MS) {
+                  return; // Debounce restorations
+                }
+                
+                // Check if this is a legitimate removal (e.g., during resize/position update)
+                // If the node is being moved to a different parent, that's legitimate
+                const shouldInline = shouldShowWidgetInline();
+                const wasInContainer = node.parentNode?.id === 'governance-widgets-wrapper';
+                const shouldBeInContainer = !shouldInline && isWidget;
+                
+                // If widget should be moved between container and topic body, allow it
+                if (isWidget && wasInContainer !== shouldBeInContainer) {
+                  return; // This is a legitimate move, don't restore
+                }
+                
+                console.warn(`⚠️ [OBSERVER] Widget/container was removed from DOM! Attempting to restore...`);
+                isRestoring = true;
+                lastRestoreTime = now;
+                restoredNodes.add(node);
+                
+                // Temporarily disconnect observer to prevent recursive calls
+                widgetObserver.disconnect();
+                
+                try {
+                  // Try to restore the widget - find appropriate location
+                  let restoreTarget = null;
+                  let restoreBefore = null;
+                  
+                  if (isWidget) {
+                    // For widgets, try to restore before first post or in container
+                    const firstPost = document.querySelector('.topic-post, .post, [data-post-id], article[data-post-id]');
+                    const container = document.getElementById('governance-widgets-wrapper');
+                    
+                    if (shouldInline) {
+                      // Should be inline - restore before first post
+                      if (firstPost && firstPost.parentNode) {
+                        restoreTarget = firstPost.parentNode;
+                        restoreBefore = firstPost;
+                      }
+                    } else if (container) {
+                      // Should be in container
+                      restoreTarget = container;
+                    }
+                  } else if (isContainer) {
+                    // For container, restore to body
+                    restoreTarget = document.body;
+                  }
+                  
+                  if (restoreTarget) {
+                    if (restoreBefore) {
+                      restoreTarget.insertBefore(node, restoreBefore);
+                    } else {
+                      restoreTarget.appendChild(node);
+                    }
+                    
+                    console.log(`✅ [OBSERVER] Restored widget/container to DOM`);
+                    
+                    // Force visibility immediately
+                    if (isWidget) {
+                      node.style.setProperty('display', 'block', 'important');
+                      node.style.setProperty('visibility', 'visible', 'important');
+                      node.style.setProperty('opacity', '1', 'important');
+                    } else if (isContainer) {
+                      node.style.setProperty('display', 'flex', 'important');
+                      node.style.setProperty('visibility', 'visible', 'important');
+                      node.style.setProperty('opacity', '1', 'important');
+                    }
+                    }
+                  } catch (e) {
+                    console.error(`❌ [OBSERVER] Failed to restore widget:`, e);
+                } finally {
+                  // Reconnect observer after a short delay
+                  setTimeout(() => {
+                    isRestoring = false;
+                    // Re-observe the document with same config as initial setup
+                    widgetObserver.observe(document.body, {
+                      childList: true,
+                      subtree: true
+                    });
+                  }, 100);
+                }
+              }
+            }
+          });
         }
       });
+      
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            // Check if the added node is a widget or contains widgets
+            const widgets = node.classList?.contains('tally-status-widget-container') 
+              ? [node] 
+              : node.querySelectorAll?.('.tally-status-widget-container') || [];
+            
+            widgets.forEach((widget) => {
+              if (widget && widget.parentNode) {
+                // Check if this is an AIP widget
+                const widgetType = widget.getAttribute('data-proposal-type');
+                const widgetTypeAttr = widget.getAttribute('data-widget-type');
+                const hasAIP = widget.querySelector('.governance-stage[data-stage="aip"]') !== null;
+                const url = widget.getAttribute('data-tally-url') || '';
+                const isAIPUrl = url.includes('vote.onaave.com') || url.includes('app.aave.com/governance') || url.includes('governance.aave.com/aip/');
+                const isAIPWidget = widgetType === 'aip' || widgetTypeAttr === 'aip' || hasAIP || isAIPUrl;
+                
+                if (isAIPWidget) {
+                  // Force AIP widgets to be visible immediately when added to DOM
+                  const computedStyle = window.getComputedStyle(widget);
+                  if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+                    console.log(`✅ [AIP] AIP widget detected in DOM but hidden, forcing visibility immediately`);
+                    widget.style.setProperty('display', 'block', 'important');
+                    widget.style.setProperty('visibility', 'visible', 'important');
+                    widget.style.setProperty('opacity', '1', 'important');
+                    widget.classList.remove('hidden', 'd-none', 'is-hidden');
+                    
+                    // Force reflow
+                    void widget.offsetHeight;
+                  }
+                }
+              }
+            });
+          }
+        });
+      });
+      // Also check all existing AIP widgets periodically (handles cases where they get hidden after being visible)
+      ensureAIPWidgetsVisible();
+    });
+    
+    // Observe the document body for widget additions
+    widgetObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    
+    // Periodic check to ensure AIP widgets stay visible (prevents them from being hidden by other code)
+    // CRITICAL: AIP widgets are topic-level and should ALWAYS be visible once found
+    // Run more frequently to catch any hiding attempts immediately
+    const aipVisibilityInterval = setInterval(() => {
+      ensureAIPWidgetsVisible();
+    }, 300); // Check every 300ms to keep AIP widgets visible (very aggressive)
+    
+    // Store interval ID so it can be cleared if needed (though it should run for the page lifetime)
+    window._aipVisibilityInterval = aipVisibilityInterval;
+    
+    // Also watch for AIP widgets being hidden via MutationObserver
+    // This catches when CSS classes or styles are changed to hide widgets
+    const aipWidgetObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+          const target = mutation.target;
+          // Check if this is an AIP widget
+          if (target.classList && target.classList.contains('tally-status-widget-container')) {
+            const widgetType = target.getAttribute('data-proposal-type');
+            const widgetTypeAttr = target.getAttribute('data-widget-type');
+            const url = target.getAttribute('data-tally-url') || '';
+            const isAIPUrl = url.includes('vote.onaave.com') || url.includes('app.aave.com/governance') || url.includes('governance.aave.com/aip/');
+            
+            if (widgetType === 'aip' || widgetTypeAttr === 'aip' || isAIPUrl) {
+              // AIP widget was modified - check if it's hidden and restore visibility
+              const computedStyle = window.getComputedStyle(target);
+              if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+                console.warn(`⚠️ [AIP] AIP widget was hidden (${mutation.attributeName} changed), restoring visibility immediately`);
+                ensureAIPWidgetsVisible();
+              }
+            }
+          }
+        }
+      });
+    });
+    
+    // Observe all AIP widgets for style/class changes
+    const observeAIPWidgets = () => {
+      const aipWidgets = document.querySelectorAll('.tally-status-widget-container[data-proposal-type="aip"], .tally-status-widget-container[data-widget-type="aip"]');
+      aipWidgets.forEach(widget => {
+        aipWidgetObserver.observe(widget, {
+          attributes: true,
+          attributeFilter: ['style', 'class'],
+          subtree: false
+        });
+      });
+    };
+    
+    // Initial observation
+    observeAIPWidgets();
+    
+    // Re-observe periodically to catch newly added AIP widgets
+    setInterval(observeAIPWidgets, 1000);
+    
+    console.log("✅ [AIP] Widget visibility observer, periodic check, and MutationObserver set up");
+  }
+
+ // Initialize immediately when DOM is ready (like tally widget)
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startWidgetInitialization);
+  } else {
+    startWidgetInitialization();
+  }
+
+  // Re-initialize topic widget on page changes
+  api.onPageChange(() => {
+    // Reset current proposal so we can detect the first one again
+    currentVisibleProposal = null;
+    
+    // CRITICAL: Clean up widgets if we're not on a topic page
+    const isTopicPage = window.location.pathname.match(/^\/t\//);
+    if (!isTopicPage) {
+      console.log("🔍 [TOPIC] Page changed to non-topic page - cleaning up widgets");
+      // Remove all widgets and container
+      const allWidgets = document.querySelectorAll('.tally-status-widget-container');
+      allWidgets.forEach(widget => widget.remove());
+      const container = document.getElementById('governance-widgets-wrapper');
+      if (container) {
+        container.remove();
+      }
+      // Reset topic tracking
+      widgetSetupCompleted = false;
+      currentTopicId = null;
+      return;
     }
-  }, 1000); // Much less frequent - 1 second intervals
-}
+    
+    // CRITICAL: Check if we're navigating to a different topic
+    // If same topic, preserve widgets to prevent blinking
+    const topicMatch = window.location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
+    const newTopicId = topicMatch ? topicMatch[1] : window.location.pathname;
+    
+    if (currentTopicId && currentTopicId === newTopicId) {
+      console.log(`🔵 [TOPIC] Same topic (${newTopicId}) - preserving widgets to prevent blinking`);
+      // Same topic - just ensure watcher is set up, but don't re-initialize widgets
+      setupTopicWatcher();
+      setupGlobalComposerDetection();
+      return;
+    }
+    
+    // Different topic - reset flags to allow fresh widget setup
+    if (currentTopicId !== newTopicId) {
+      console.log(`🔵 [TOPIC] Topic changed from ${currentTopicId} to ${newTopicId} - will re-initialize widgets`);
+      widgetSetupCompleted = false;
+      currentTopicId = newTopicId;
+    }
+    
+    // Initialize immediately - no setTimeout delay
+    setupTopicWatcher();
+    setupGlobalComposerDetection();
+  });
 });
