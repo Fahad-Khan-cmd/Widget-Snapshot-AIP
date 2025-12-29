@@ -9760,7 +9760,7 @@ function getOrCreateWidgetsContainer() {
     // Visibility is enforced immediately on every scroll to prevent disappearing
     // Use enhanced scroll handler with continuous visibility checking
 
-   // ---------------------- XYZ Scroll ----------------------
+    window.addEventListener('scroll', { passive: true });
 
 
     // CRITICAL: Also handle resize events to ensure widget stays visible when switching screen sizes
