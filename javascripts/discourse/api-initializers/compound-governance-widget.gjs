@@ -11716,50 +11716,55 @@ if (isTopicPage) {
 // -------------------- Compound Governance Widget --------------------
 // Re-initialize topic widget on page changes
 api.onPageChange(() => {
-    // Reset current proposal so we can detect the first one again
+    // Reset current proposal
     currentVisibleProposal = null;
+    
+    // 🆕 URL SE POST NUMBER HATAO (NEW FEATURE)
+    const currentPath = window.location.pathname;
+    const postMatch = currentPath.match(/^(\/t\/[^\/]+\/\d+)\/\d+$/);
+    if (postMatch) {
+        const cleanPath = postMatch[1];
+        window.history.replaceState({}, "", cleanPath);
+        window.scrollTo(0, 0);
+        console.log("✅ URL se post number hata diya:", cleanPath);
+    }
     
     // CRITICAL: Clean up widgets if we're not on a topic page
     const isTopicPage = window.location.pathname.match(/^\/t\//);
     if (!isTopicPage) {
-      console.log("🔍 [TOPIC] Page changed to non-topic page - cleaning up widgets");
-      // Remove all widgets and container
+      console.log("🔍 Non-topic page - widgets clean kar rahe hain");
       const allWidgets = document.querySelectorAll('.tally-status-widget-container');
       allWidgets.forEach(widget => widget.remove());
       const container = document.getElementById('governance-widgets-wrapper');
       if (container) {
         container.remove();
       }
-      // Reset topic tracking
       widgetSetupCompleted = false;
       currentTopicId = null;
       return;
     }
     
     // CRITICAL: Check if we're navigating to a different topic
-    // If same topic, preserve widgets to prevent blinking
     const topicMatch = window.location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
     const newTopicId = topicMatch ? topicMatch[1] : window.location.pathname;
     
     if (currentTopicId && currentTopicId === newTopicId) {
-      console.log(`🔵 [TOPIC] Same topic (${newTopicId}) - preserving widgets to prevent blinking`);
-      // Same topic - just ensure watcher is set up, but don't re-initialize widgets
+      console.log(`🔵 Same topic (${newTopicId}) - widgets preserve kar rahe hain`);
       setupTopicWatcher();
       setupGlobalComposerDetection();
       return;
     }
     
-    // Different topic - reset flags to allow fresh widget setup
+    // Different topic - reset flags
     if (currentTopicId !== newTopicId) {
-      console.log(`🔵 [TOPIC] Topic changed from ${currentTopicId} to ${newTopicId} - will re-initialize widgets`);
+      console.log(`🔵 Topic change ho gaya: ${currentTopicId} se ${newTopicId}`);
       widgetSetupCompleted = false;
       currentTopicId = newTopicId;
     }
     
-    // Initialize immediately - no setTimeout delay
+    // Initialize immediately
     setupTopicWatcher();
     setupGlobalComposerDetection();
-  });
 });
 
 
