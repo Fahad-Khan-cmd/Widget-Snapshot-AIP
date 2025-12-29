@@ -11685,57 +11685,120 @@ function renderProposalWidget(container, proposalData, originalUrl) {
     console.log("✅ [AIP] Widget visibility observer, periodic check, and MutationObserver set up");
   }
   
-  // Initialize immediately when DOM is ready (like tally widget)
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", startWidgetInitialization);
-  } else {
-    startWidgetInitialization();
-  }
+  // Initialize immediately when DOM is ready
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializeWidgets);
+} else {
+  initializeWidgets();
+}
 
-  // Re-initialize topic widget on page changes
-  api.onPageChange(() => {
-    // Reset current proposal so we can detect the first one again
-    currentVisibleProposal = null;
-    
-    // CRITICAL: Clean up widgets if we're not on a topic page
-    const isTopicPage = window.location.pathname.match(/^\/t\//);
-    if (!isTopicPage) {
-      console.log("🔍 [TOPIC] Page changed to non-topic page - cleaning up widgets");
-      // Remove all widgets and container
-      const allWidgets = document.querySelectorAll('.tally-status-widget-container');
-      allWidgets.forEach(widget => widget.remove());
-      const container = document.getElementById('governance-widgets-wrapper');
-      if (container) {
-        container.remove();
-      }
-      // Reset topic tracking
-      widgetSetupCompleted = false;
-      currentTopicId = null;
-      return;
-    }
-    
-    // CRITICAL: Check if we're navigating to a different topic
-    // If same topic, preserve widgets to prevent blinking
-    const topicMatch = window.location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
-    const newTopicId = topicMatch ? topicMatch[1] : window.location.pathname;
-    
-    if (currentTopicId && currentTopicId === newTopicId) {
-      console.log(`🔵 [TOPIC] Same topic (${newTopicId}) - preserving widgets to prevent blinking`);
-      // Same topic - just ensure watcher is set up, but don't re-initialize widgets
-      setupTopicWatcher();
-      setupGlobalComposerDetection();
-      return;
-    }
-    
-    // Different topic - reset flags to allow fresh widget setup
-    if (currentTopicId !== newTopicId) {
-      console.log(`🔵 [TOPIC] Topic changed from ${currentTopicId} to ${newTopicId} - will re-initialize widgets`);
-      widgetSetupCompleted = false;
-      currentTopicId = newTopicId;
-    }
-    
-    // Initialize immediately - no setTimeout delay
-    setupTopicWatcher();
+// Main initialization function
+function initializeWidgets() {
+  const path = window.location.pathname;
+  const isTopicPage = path.match(/^\/t\//);
+  
+  if (!isTopicPage) {
+    console.log("🔍 [INIT] Not on a topic page - skipping widget setup");
+    cleanupWidgets();
+    return;
+  }
+  
+  // Extract topic ID
+  const topicMatch = path.match(/^\/t\/[^\/]+\/(\d+)/);
+  const newTopicId = topicMatch ? topicMatch[1] : path;
+  
+  // If same topic, preserve widgets (prevent blinking)
+  if (window.currentTopicId === newTopicId && window.widgetsInitialized) {
+    console.log(`🔵 [INIT] Same topic (${newTopicId}) - preserving widgets`);
+    return;
+  }
+  
+  // Clean up previous widgets
+  cleanupWidgets();
+  
+  // Store current topic
+  window.currentTopicId = newTopicId;
+  
+  // Initialize widgets with a small delay to let page settle
+  setTimeout(() => {
+    setupTopicWidgets();
     setupGlobalComposerDetection();
-  });
+    window.widgetsInitialized = true;
+    console.log(`✅ [INIT] Widgets initialized for topic: ${newTopicId}`);
+  }, 100);
+}
+
+// Cleanup function
+function cleanupWidgets() {
+  // Remove all widgets and container
+  document.querySelectorAll('.tally-status-widget-container').forEach(w => w.remove());
+  document.getElementById('governance-widgets-wrapper')?.remove();
+  
+  // Clear intervals
+  if (window._aipVisibilityInterval) {
+    clearInterval(window._aipVisibilityInterval);
+    window._aipVisibilityInterval = null;
+  }
+  
+  // Disconnect observers
+  if (window._widgetObserver) {
+    window._widgetObserver.disconnect();
+    window._widgetObserver = null;
+  }
+  
+  // Reset state
+  window.widgetsInitialized = false;
+  window.currentTopicId = null;
+  window.currentVisibleProposal = null;
+}
+
+// Re-initialize on page changes (FIXED VERSION)
+api.onPageChange(() => {
+  console.log("🔄 [PAGE CHANGE] Detected page change");
+  
+  // Use a debouncer to prevent multiple rapid calls
+  if (window.pageChangeTimeout) {
+    clearTimeout(window.pageChangeTimeout);
+  }
+  
+  window.pageChangeTimeout = setTimeout(() => {
+    initializeWidgets();
+  }, 50); // Small delay to let Discourse settle
+});
+
+// Prevent anchor scroll in topic URLs
+function preventAnchorScroll() {
+  const currentUrl = window.location.href;
+  if (currentUrl.includes('#')) {
+    // Remove anchor from URL without reloading
+    const cleanUrl = currentUrl.split('#')[0];
+    window.history.replaceState(null, null, cleanUrl);
+  }
+}
+
+// Call this during initialization
+preventAnchorScroll();
+
+// Simplified setupTopicWatcher function
+function setupTopicWatcher() {
+  // Clear any existing intervals first
+  if (window.topicWatcherInterval) {
+    clearInterval(window.topicWatcherInterval);
+  }
+  
+  // Only set up a single, less aggressive watcher
+  window.topicWatcherInterval = setInterval(() => {
+    // Your widget detection logic here
+    const widgets = document.querySelectorAll('.tally-status-widget-container');
+    
+    if (widgets.length > 0) {
+      // Only apply minimal styling if needed
+      widgets.forEach(widget => {
+        if (window.getComputedStyle(widget).display === 'none') {
+          widget.style.display = 'block';
+        }
+      });
+    }
+  }, 1000); // Much less frequent - 1 second intervals
+}
 });
