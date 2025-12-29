@@ -2,6 +2,15 @@ import { apiInitializer } from "discourse/lib/api";
 
 
 console.log("✅ Aave Governance Widget: JavaScript file loaded!");
+console.log("📊 [DEBUG] State:", {
+  currentTopicId,
+  previousTopicId,
+  widgetSetupCompleted,
+  isTopicPage,
+  path: window.location.pathname
+});
+let topicWatcher = null;
+let globalComposerObserver = null;
 
 
 
@@ -11696,50 +11705,119 @@ function getOrCreateWidgetsContainer() {
   }
 
   // Re-initialize topic widget on page changes
+  function cleanupWatchersAndListeners() {
+  if (topicWatcher && typeof topicWatcher.disconnect === 'function') {
+    topicWatcher.disconnect();
+    topicWatcher = null;
+  }
+  if (globalComposerObserver && typeof globalComposerObserver.disconnect === 'function') {
+    globalComposerObserver.disconnect();
+    globalComposerObserver = null;
+  }
+}
+
+// Re-initialize topic widget on page changes
+api.onPageChange(() => {
+  console.log("🔄 [TOPIC] Page change detected");
   
-  api.onPageChange(() => {
-    // Reset current proposal so we can detect the first one again
-    currentVisibleProposal = null;
+  // Reset current proposal so we can detect the first one again
+  currentVisibleProposal = null;
+  
+  // Always clean up watchers first to prevent duplicates
+  cleanupWatchersAndListeners();
+  
+  // Extract topic ID with better regex
+  const topicMatch = window.location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
+  const newTopicId = topicMatch ? topicMatch[1] : null;
+  const isTopicPage = !!newTopicId;
+  
+  // Store previous topic for comparison
+  const previousTopicId = currentTopicId;
+  
+  if (!isTopicPage) {
+    console.log("🔍 [TOPIC] Non-topic page - cleaning up");
+    // Remove all widgets and container
+    document.querySelectorAll('.tally-status-widget-container').forEach(widget => widget.remove());
+    const container = document.getElementById('governance-widgets-wrapper');
+    if (container) container.remove();
     
-    // CRITICAL: Clean up widgets if we're not on a topic page
-    const isTopicPage = window.location.pathname.match(/^\/t\//);
-    if (!isTopicPage) {
-      console.log("🔍 [TOPIC] Page changed to non-topic page - cleaning up widgets");
-      // Remove all widgets and container
-      const allWidgets = document.querySelectorAll('.tally-status-widget-container');
-      allWidgets.forEach(widget => widget.remove());
-      const container = document.getElementById('governance-widgets-wrapper');
-      if (container) {
-        container.remove();
-      }
-      // Reset topic tracking
-      widgetSetupCompleted = false;
-      currentTopicId = null;
+    // Reset all tracking
+    widgetSetupCompleted = false;
+    currentTopicId = null;
+    return;
+  }
+  
+  console.log(`🔍 [TOPIC] Topic page detected: ${newTopicId}`);
+  
+  // Check if we're actually on the same topic
+  const isSameTopic = previousTopicId && previousTopicId.toString() === newTopicId.toString();
+  
+  if (isSameTopic && widgetSetupCompleted) {
+    console.log(`🔵 [TOPIC] Same topic (${newTopicId}) - widgets already exist, skipping setup`);
+    return;
+  }
+  
+  // Different topic or widgets not set up
+  console.log(`🔵 [TOPIC] ${previousTopicId ? 'Topic changed' : 'New topic'} (${newTopicId}) - will initialize widgets`);
+  
+  // Remove any existing widgets first to prevent duplicates
+  document.querySelectorAll('.tally-status-widget-container').forEach(widget => widget.remove());
+  const container = document.getElementById('governance-widgets-wrapper');
+  if (container) container.remove();
+  
+  // Reset flags and update topic ID
+  widgetSetupCompleted = false;
+  currentTopicId = newTopicId;
+  
+  // Use a debounced approach to prevent multiple rapid initializations
+  clearTimeout(window.topicWidgetSetupTimeout);
+  
+  // Wait for DOM to be stable
+  window.topicWidgetSetupTimeout = setTimeout(() => {
+    console.log(`⏱️ [TOPIC] Starting widget setup for topic ${newTopicId}`);
+    
+    // Double-check we're still on the same topic
+    const currentTopicMatch = window.location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
+    const currentTopicId = currentTopicMatch ? currentTopicMatch[1] : null;
+    
+    if (currentTopicId !== newTopicId) {
+      console.log("⚠️ [TOPIC] Topic changed during setup, aborting");
       return;
     }
     
-    // CRITICAL: Check if we're navigating to a different topic
-    // If same topic, preserve widgets to prevent blinking
-    const topicMatch = window.location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
-    const newTopicId = topicMatch ? topicMatch[1] : window.location.pathname;
-    
-    if (currentTopicId && currentTopicId === newTopicId) {
-      console.log(`🔵 [TOPIC] Same topic (${newTopicId}) - preserving widgets to prevent blinking`);
-      // Same topic - just ensure watcher is set up, but don't re-initialize widgets
+    // Only set up if widgets haven't been set up yet
+    if (!widgetSetupCompleted) {
+      console.log(`🚀 [TOPIC] Initializing widgets for topic ${newTopicId}`);
       setupTopicWatcher();
       setupGlobalComposerDetection();
-      return;
     }
+  }, 300); // Increased delay to ensure DOM is fully ready
+});
+
+// Modify your setupTopicWatcher to properly track completion
+function setupTopicWatcher() {
+  // Clean up existing watcher if it exists
+  cleanupWatchersAndListeners();
+  
+  console.log("👀 [TOPIC] Setting up topic watcher");
+  
+  // Create new mutation observer
+  topicWatcher = new MutationObserver((mutations) => {
+    // Your existing mutation logic here
     
-    // Different topic - reset flags to allow fresh widget setup
-    if (currentTopicId !== newTopicId) {
-      console.log(`🔵 [TOPIC] Topic changed from ${currentTopicId} to ${newTopicId} - will re-initialize widgets`);
-      widgetSetupCompleted = false;
-      currentTopicId = newTopicId;
+    // IMPORTANT: Set widgetSetupCompleted to true when widgets are successfully created
+    // Add this check wherever you create widgets successfully
+    const widgetsExist = document.querySelectorAll('.tally-status-widget-container').length > 0;
+    if (widgetsExist && !widgetSetupCompleted) {
+      widgetSetupCompleted = true;
+      console.log("✅ [TOPIC] Widgets created successfully, flag set to true");
     }
-    
-    // Initialize immediately - no setTimeout delay
-    setupTopicWatcher();
-    setupGlobalComposerDetection();
   });
+  
+  // Start observing
+  topicWatcher.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+}
 });
