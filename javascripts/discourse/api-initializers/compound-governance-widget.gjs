@@ -11,6 +11,9 @@ console.log("📊 [DEBUG] State:", {
 });
 let topicWatcher = null;
 let globalComposerObserver = null;
+let isWidgetSetupRunning = false;
+let currentMutationObserver = null;
+let currentComposerObserver = null;
 
 
 
@@ -11723,34 +11726,47 @@ api.onPageChange(() => {
   // Reset current proposal so we can detect the first one again
   currentVisibleProposal = null;
   
-  // Always clean up watchers first to prevent duplicates
-  cleanupWatchersAndListeners();
+  // Stop any running setup
+  isWidgetSetupRunning = false;
   
-  // Extract topic ID with better regex
-  const topicMatch = window.location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
-  const newTopicId = topicMatch ? topicMatch[1] : null;
-  const isTopicPage = !!newTopicId;
+  // Clean up existing observers
+  if (currentMutationObserver && typeof currentMutationObserver.disconnect === 'function') {
+    currentMutationObserver.disconnect();
+    currentMutationObserver = null;
+  }
   
-  // Store previous topic for comparison
-  const previousTopicId = currentTopicId;
+  if (currentComposerObserver && typeof currentComposerObserver.disconnect === 'function') {
+    currentComposerObserver.disconnect();
+    currentComposerObserver = null;
+  }
   
+  // CRITICAL: Clean up widgets if we're not on a topic page
+  const isTopicPage = window.location.pathname.match(/^\/t\//);
   if (!isTopicPage) {
-    console.log("🔍 [TOPIC] Non-topic page - cleaning up");
+    console.log("🔍 [TOPIC] Page changed to non-topic page - cleaning up widgets");
     // Remove all widgets and container
     document.querySelectorAll('.tally-status-widget-container').forEach(widget => widget.remove());
     const container = document.getElementById('governance-widgets-wrapper');
     if (container) container.remove();
-    
-    // Reset all tracking
+    // Reset topic tracking
     widgetSetupCompleted = false;
     currentTopicId = null;
     return;
   }
   
+  // Extract topic ID
+  const topicMatch = window.location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
+  const newTopicId = topicMatch ? topicMatch[1] : null;
+  
+  if (!newTopicId) {
+    console.log("⚠️ [TOPIC] Could not extract topic ID from URL");
+    return;
+  }
+  
   console.log(`🔍 [TOPIC] Topic page detected: ${newTopicId}`);
   
-  // Check if we're actually on the same topic
-  const isSameTopic = previousTopicId && previousTopicId.toString() === newTopicId.toString();
+  // Check if we're navigating to a different topic
+  const isSameTopic = currentTopicId && currentTopicId.toString() === newTopicId.toString();
   
   if (isSameTopic && widgetSetupCompleted) {
     console.log(`🔵 [TOPIC] Same topic (${newTopicId}) - widgets already exist, skipping setup`);
@@ -11758,7 +11774,7 @@ api.onPageChange(() => {
   }
   
   // Different topic or widgets not set up
-  console.log(`🔵 [TOPIC] ${previousTopicId ? 'Topic changed' : 'New topic'} (${newTopicId}) - will initialize widgets`);
+  console.log(`🔵 [TOPIC] ${currentTopicId ? 'Topic changed' : 'New topic'} (${newTopicId}) - will initialize widgets`);
   
   // Remove any existing widgets first to prevent duplicates
   document.querySelectorAll('.tally-status-widget-container').forEach(widget => widget.remove());
@@ -11769,53 +11785,127 @@ api.onPageChange(() => {
   widgetSetupCompleted = false;
   currentTopicId = newTopicId;
   
-  // Use a debounced approach to prevent multiple rapid initializations
-  clearTimeout(window.topicWidgetSetupTimeout);
+  // Clear any existing timeout
+  if (window.widgetSetupTimeout) {
+    clearTimeout(window.widgetSetupTimeout);
+  }
   
-  // Wait for DOM to be stable
-  window.topicWidgetSetupTimeout = setTimeout(() => {
+  // Debounce the setup to prevent multiple rapid executions
+  window.widgetSetupTimeout = setTimeout(() => {
     console.log(`⏱️ [TOPIC] Starting widget setup for topic ${newTopicId}`);
     
     // Double-check we're still on the same topic
     const currentTopicMatch = window.location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
-    const currentTopicId = currentTopicMatch ? currentTopicMatch[1] : null;
+    const currentTopicIdCheck = currentTopicMatch ? currentTopicMatch[1] : null;
     
-    if (currentTopicId !== newTopicId) {
+    if (currentTopicIdCheck !== newTopicId) {
       console.log("⚠️ [TOPIC] Topic changed during setup, aborting");
       return;
     }
     
-    // Only set up if widgets haven't been set up yet
-    if (!widgetSetupCompleted) {
-      console.log(`🚀 [TOPIC] Initializing widgets for topic ${newTopicId}`);
+    // Prevent concurrent setup
+    if (isWidgetSetupRunning) {
+      console.log("⚠️ [TOPIC] Widget setup already running, skipping");
+      return;
+    }
+    
+    isWidgetSetupRunning = true;
+    
+    try {
+      console.log("🚀 [TOPIC] Initializing widgets");
       setupTopicWatcher();
       setupGlobalComposerDetection();
+    } catch (error) {
+      console.error("❌ [TOPIC] Error during widget setup:", error);
+      isWidgetSetupRunning = false;
     }
-  }, 300); // Increased delay to ensure DOM is fully ready
+  }, 500); // Increased delay to ensure DOM is fully ready
 });
 
-// Modify your setupTopicWatcher to properly track completion
+// Modify your setupTopicWatcher function:
 function setupTopicWatcher() {
-  // Clean up existing watcher if it exists
-  cleanupWatchersAndListeners();
-  
   console.log("👀 [TOPIC] Setting up topic watcher");
   
-  // Create new mutation observer
-  topicWatcher = new MutationObserver((mutations) => {
-    // Your existing mutation logic here
+  // Clean up existing observer
+  if (currentMutationObserver && typeof currentMutationObserver.disconnect === 'function') {
+    currentMutationObserver.disconnect();
+  }
+  
+  // Create a new mutation observer
+  currentMutationObserver = new MutationObserver((mutations) => {
+    // Check if widgets already exist to prevent duplicates
+    const existingWidgets = document.querySelectorAll('.tally-status-widget-container');
+    if (existingWidgets.length > 0 && widgetSetupCompleted) {
+      console.log("🔵 [TOPIC] Widgets already exist, skipping detection");
+      return;
+    }
     
-    // IMPORTANT: Set widgetSetupCompleted to true when widgets are successfully created
-    // Add this check wherever you create widgets successfully
-    const widgetsExist = document.querySelectorAll('.tally-status-widget-container').length > 0;
-    if (widgetsExist && !widgetSetupCompleted) {
-      widgetSetupCompleted = true;
-      console.log("✅ [TOPIC] Widgets created successfully, flag set to true");
+    // Your existing detection logic here...
+    // Make sure to add this check inside your detection logic too
+    
+    // After successful widget creation, set the flag
+    if (existingWidgets.length === 0) {
+      // Run your detection and widget creation
+      detectAndCreateWidgets();
     }
   });
   
   // Start observing
-  topicWatcher.observe(document.body, {
+  currentMutationObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+  
+  // Also run initial detection
+  setTimeout(() => {
+    detectAndCreateWidgets();
+  }, 1000); // Wait a bit longer for initial content
+}
+
+function detectAndCreateWidgets() {
+  // Check if already running
+  if (isWidgetSetupRunning) {
+    console.log("⚠️ [TOPIC] Detection already in progress");
+    return;
+  }
+  
+  isWidgetSetupRunning = true;
+  
+  try {
+    console.log("🔍 [TOPIC] Starting proposal detection");
+    
+    // Your existing detection logic...
+    // Detect proposals and create widgets...
+    
+    // After successful widget creation:
+    const widgetsCreated = document.querySelectorAll('.tally-status-widget-container').length > 0;
+    if (widgetsCreated) {
+      widgetSetupCompleted = true;
+      console.log("✅ [TOPIC] Widget setup completed successfully");
+    }
+  } finally {
+    isWidgetSetupRunning = false;
+  }
+}
+
+// Modify setupGlobalComposerDetection similarly:
+function setupGlobalComposerDetection() {
+  console.log("👀 [TOPIC] Setting up global composer detection");
+  
+  // Clean up existing observer
+  if (currentComposerObserver && typeof currentComposerObserver.disconnect === 'function') {
+    currentComposerObserver.disconnect();
+  }
+  
+  // Your existing composer detection logic...
+  
+  // Store the observer
+  currentComposerObserver = new MutationObserver((mutations) => {
+    // Your composer detection logic
+  });
+  
+  // Start observing
+  currentComposerObserver.observe(document.body, {
     childList: true,
     subtree: true
   });
