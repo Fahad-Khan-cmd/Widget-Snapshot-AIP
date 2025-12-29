@@ -11716,50 +11716,69 @@ if (isTopicPage) {
 // -------------------- Compound Governance Widget --------------------
 // Re-initialize topic widget on page changes
 api.onPageChange(() => {
-    // Reset current proposal so we can detect the first one again
-    currentVisibleProposal = null;
-    
-    // CRITICAL: Clean up widgets if we're not on a topic page
-    const isTopicPage = window.location.pathname.match(/^\/t\//);
-    if (!isTopicPage) {
-      console.log("🔍 [TOPIC] Page changed to non-topic page - cleaning up widgets");
-      // Remove all widgets and container
-      const allWidgets = document.querySelectorAll('.tally-status-widget-container');
-      allWidgets.forEach(widget => widget.remove());
-      const container = document.getElementById('governance-widgets-wrapper');
-      if (container) {
-        container.remove();
-      }
-      // Reset topic tracking
-      widgetSetupCompleted = false;
-      currentTopicId = null;
-      return;
-    }
-    
-    // CRITICAL: Check if we're navigating to a different topic
-    // If same topic, preserve widgets to prevent blinking
-    const topicMatch = window.location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
-    const newTopicId = topicMatch ? topicMatch[1] : window.location.pathname;
-    
-    if (currentTopicId && currentTopicId === newTopicId) {
-      console.log(`🔵 [TOPIC] Same topic (${newTopicId}) - preserving widgets to prevent blinking`);
-      // Same topic - just ensure watcher is set up, but don't re-initialize widgets
-      setupTopicWatcher();
-      setupGlobalComposerDetection();
-      return;
-    }
-    
-    // Different topic - reset flags to allow fresh widget setup
-    if (currentTopicId !== newTopicId) {
-      console.log(`🔵 [TOPIC] Topic changed from ${currentTopicId} to ${newTopicId} - will re-initialize widgets`);
-      widgetSetupCompleted = false;
-      currentTopicId = newTopicId;
-    }
-    
-    // Initialize immediately - no setTimeout delay
+  // Reset proposal visibility tracking
+  currentVisibleProposal = null;
+
+  const path = window.location.pathname;
+  const isTopicPage = /^\/t\//.test(path);
+
+  /* ----------------------------------------------------
+   * NON-TOPIC PAGE → FULL CLEANUP
+   * -------------------------------------------------- */
+  if (!isTopicPage) {
+    console.log("🔍 [TOPIC] Non-topic page detected — cleaning up widgets");
+
+    document
+      .querySelectorAll(".tally-status-widget-container")
+      .forEach(el => el.remove());
+
+    document
+      .getElementById("governance-widgets-wrapper")
+      ?.remove();
+
+    widgetSetupCompleted = false;
+    currentTopicId = null;
+
+    return;
+  }
+
+  /* ----------------------------------------------------
+   * EXTRACT TOPIC ID
+   * -------------------------------------------------- */
+  const match = path.match(/^\/t\/[^\/]+\/(\d+)/);
+  const newTopicId = match ? match[1] : null;
+
+  if (!newTopicId) {
+    console.warn("⚠️ [TOPIC] Could not extract topic ID");
+    return;
+  }
+
+  /* ----------------------------------------------------
+   * SAME TOPIC → DO NOT REINITIALIZE
+   * -------------------------------------------------- */
+  if (currentTopicId === newTopicId) {
+    console.log(`🔵 [TOPIC] Same topic (${newTopicId}) — preserving widgets`);
     setupTopicWatcher();
     setupGlobalComposerDetection();
-  });
+    return;
+  }
+
+  /* ----------------------------------------------------
+   * NEW TOPIC → RESET STATE
+   * -------------------------------------------------- */
+  console.log(
+    `🟢 [TOPIC] Topic changed: ${currentTopicId} → ${newTopicId}`
+  );
+
+  widgetSetupCompleted = false;
+  currentTopicId = newTopicId;
+
+  /* ----------------------------------------------------
+   * INITIALIZE FOR NEW TOPIC
+   * -------------------------------------------------- */
+  setupTopicWatcher();
+  setupGlobalComposerDetection();
+});
 });
 
 
