@@ -2585,7 +2585,7 @@ function renderProposalWidget(container, proposalData, originalUrl) {
       console.warn("⚠️ [POSITION] Container not in DOM, skipping position update");
       return;
     }
-    
+  
     const currentScreenWidth = window.innerWidth;
     const shouldInline = shouldShowWidgetInline();
     const currentSidebarCollapsed = isSidebarCollapsed();
@@ -2731,7 +2731,7 @@ function renderProposalWidget(container, proposalData, originalUrl) {
       // Desktop: Use fixed positioning (right side) - percentage-based like Tally widget
       container.style.setProperty('position', 'fixed', 'important');
       container.style.setProperty('z-index', '500', 'important');
-      container.style.setProperty('right', '2%', 'important'); // Percentage-based distance from right edge
+      container.style.setProperty('right', '50px', 'important'); // Percentage-based distance from right edge
       container.style.setProperty('left', 'auto', 'important');
       container.style.setProperty('top', '180px', 'important');
       // CRITICAL: Keep width fixed at 320px to prevent width changes on scroll
