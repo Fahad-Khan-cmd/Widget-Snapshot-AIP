@@ -2481,22 +2481,27 @@ function renderProposalWidget(container, proposalData, originalUrl) {
   }
 
 
-  function getEffectiveViewportWidth() {
-  return window.visualViewport
-    ? window.visualViewport.width
-    : window.innerWidth;
-}
-
-  // Determine if widget should be inline (top) or fixed (right side)
-function shouldShowWidgetInline() {
-  const width = getEffectiveViewportWidth();
-
-  if (width >= 1480 && width <= 1780) {
-    return !isSidebarCollapsed();
+   function shouldShowWidgetInline() {
+    const width = window.innerWidth;
+    
+    // Less than 1480px: always inline (top)
+    if (width < 1480) {
+      return true;
+    }
+    
+    // Greater than 1780px: always fixed (right side)
+    if (width > 1780) {
+      return false;
+    }
+    
+    // Between 1480px and 1780px: check sidebar state
+    // If sidebar is collapsed: show on right side (fixed)
+    // If sidebar is expanded: show on top (inline)
+    const sidebarCollapsed = isSidebarCollapsed();
+    return !sidebarCollapsed; // If sidebar is expanded, show inline; if collapsed, show fixed
   }
 
-  return false;
-}
+
 
   // Returns container for large screens (fixed positioning), null for mobile (inline positioning)
 function getOrCreateWidgetsContainer() {
