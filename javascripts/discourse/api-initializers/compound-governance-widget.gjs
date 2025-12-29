@@ -11719,7 +11719,7 @@ api.onPageChange(() => {
   const path = window.location.pathname;
 
   // ==========================================
-  // 🔒 CRITICAL FIX: remove /postNumber ASAP
+  // 🔒 Remove /postNumber to prevent auto-scroll
   // ==========================================
   const postMatch = path.match(/^(\/t\/[^\/]+\/\d+)\/\d+$/);
   if (postMatch) {
@@ -11727,38 +11727,36 @@ api.onPageChange(() => {
     window.history.replaceState({}, "", cleanPath);
     console.log("🟢 [TOPIC] Removed post number from URL:", cleanPath);
 
-    // Optional: ensure scroll stays at top
+    // Ensure scroll stays at top
     window.scrollTo(0, 0);
   }
 
   // ==========================================
-  // CRITICAL: Clean up widgets if we're not on a topic page
+  // Clean up widgets if not on a topic page
   // ==========================================
   const isTopicPage = window.location.pathname.match(/^\/t\//);
   if (!isTopicPage) {
     console.log("🔍 [TOPIC] Page changed to non-topic page - cleaning up widgets");
-    
-    // Remove all widgets and container
+
     const allWidgets = document.querySelectorAll('.tally-status-widget-container');
     allWidgets.forEach(widget => widget.remove());
 
     const container = document.getElementById('governance-widgets-wrapper');
     if (container) container.remove();
 
-    // Reset topic tracking
     widgetSetupCompleted = false;
     currentTopicId = null;
     return;
   }
 
   // ==========================================
-  // Check if we're navigating to a different topic
+  // Detect topic change
   // ==========================================
   const topicMatch = window.location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
   const newTopicId = topicMatch ? topicMatch[1] : window.location.pathname;
 
   if (currentTopicId && currentTopicId === newTopicId) {
-    console.log(`🔵 [TOPIC] Same topic (${newTopicId}) - preserving widgets to prevent blinking`);
+    console.log(`🔵 [TOPIC] Same topic (${newTopicId}) - preserving widgets`);
     setupTopicWatcher();
     setupGlobalComposerDetection();
     return;
@@ -11770,7 +11768,7 @@ api.onPageChange(() => {
     currentTopicId = newTopicId;
   }
 
-  // Initialize immediately - no setTimeout delay
+  // Initialize widgets
   setupTopicWatcher();
   setupGlobalComposerDetection();
 });
