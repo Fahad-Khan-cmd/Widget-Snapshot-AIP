@@ -9243,20 +9243,37 @@ function getOrCreateWidgetsContainer() {
       clearTimeout(widgetSetupTimeout);
     }
     
-    // CRITICAL: Check if we're on a different topic - reset completion flag if so
-    const isTopicPage = window.location.pathname.match(/^\/t\//);
-    if (isTopicPage) {
-      const topicMatch = window.location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
-      const topicId = topicMatch ? topicMatch[1] : window.location.pathname;
-      if (currentTopicId !== topicId) {
-        widgetSetupCompleted = false;
-        currentTopicId = topicId;
-        console.log(`🔵 [TOPIC] Topic changed - resetting widget setup flag. New topic: ${topicId}`);
-      }
-    } else {
-      widgetSetupCompleted = false;
-      currentTopicId = null;
-    }
+   // -------------------------- XYZ ----------------
+
+// 🔒 FIX: remove /postNumber (e.g. /13/10) to stop auto scroll
+const path = window.location.pathname;
+const postNumberMatch = path.match(/^(\/t\/[^\/]+\/\d+)\/\d+$/);
+
+if (postNumberMatch) {
+  const cleanPath = postNumberMatch[1];
+  window.history.replaceState({}, "", cleanPath);
+  console.log("🟢 [TOPIC] Cleaned topic URL:", cleanPath);
+}
+
+const isTopicPage = window.location.pathname.match(/^\/t\//);
+
+if (isTopicPage) {
+  const topicMatch = window.location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
+  const topicId = topicMatch ? topicMatch[1] : window.location.pathname;
+
+  if (currentTopicId !== topicId) {
+    widgetSetupCompleted = false;
+    currentTopicId = topicId;
+    console.log(`🔵 [TOPIC] Topic changed - resetting widget setup flag. New topic: ${topicId}`);
+  }
+} else {
+  widgetSetupCompleted = false;
+  currentTopicId = null;
+}
+
+
+// ----------------------------------------------------
+
     
     // CRITICAL: If widget setup already completed and widgets exist, skip re-initialization
     if (widgetSetupCompleted) {
