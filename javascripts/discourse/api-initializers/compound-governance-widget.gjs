@@ -3,42 +3,6 @@ import { apiInitializer } from "discourse/lib/api";
 let DISABLE_GOVERNANCE_LOADER = true;
 
 
-// ----------------------- xyz -------------
-// -----------------------------
-// SAVE SCROLL POSITION
-// -----------------------------
-function hardRestoreScroll(topicId) {
-  const key = `topic-scroll-${topicId}`;
-  const y = sessionStorage.getItem(key);
-  if (!y) return;
-
-  let attempts = 0;
-
-  const force = () => {
-    window.scrollTo(0, parseInt(y, 10));
-    attempts++;
-
-    if (attempts < 10) {
-      requestAnimationFrame(force);
-    }
-  };
-
-  requestAnimationFrame(force);
-}
-
-
-
-window.addEventListener("scroll", () => {
-  const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
-  if (!match) return;
-
-  sessionStorage.setItem(
-    `topic-scroll-${match[1]}`,
-    window.scrollY
-  );
-});
-
-
 
 
 
@@ -11779,11 +11743,67 @@ document.addEventListener("click", (e) => {
 });
 
 
+
+// ----------------------- xyz -------------
+// -----------------------------
+// SAVE SCROLL POSITION
+// -----------------------------
+function saveLastReadPost(topicId, postId) {
+  localStorage.setItem(`lastReadPost_${topicId}`, postId);
+}
+
+function getLastReadPost(topicId) {
+  return localStorage.getItem(`lastReadPost_${topicId}`);
+}
+
+
+
+function hardRestoreScroll(topicId) {
+  const lastReadPostId = getLastReadPost(topicId);
+
+  if (lastReadPostId) {
+    const postEl = document.getElementById(`post-${lastReadPostId}`);
+    if (postEl) {
+      postEl.scrollIntoView({ behavior: 'auto', block: 'start' });
+      console.log(`🔵 [SCROLL] Restored to last read post: ${lastReadPostId}`);
+      return;
+    }
+  }
+
+  // Agar last read post nahi mila, top pe scroll
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+
+
+function attachPostReadListeners() {
+  document.querySelectorAll(".post").forEach(post => {
+    post.addEventListener("mouseenter", () => {
+      const topicId = currentTopicId;
+      const postId = post.dataset.postId || post.id.replace('post-', '');
+      saveLastReadPost(topicId, postId);
+    });
+  });
+}
+
+
+
 // =====================================================
 // 🧠 PAGE CHANGE HANDLER (BACKUP + WIDGET LOGIC)
 // =====================================================
 
 api.onPageChange(() => {
+
+setupTopicWatcher();
+setupGlobalComposerDetection();
+
+// ✅ Attach listeners to posts
+attachPostReadListeners();
+
+// ✅ Scroll restore after posts are rendered
+setTimeout(() => hardRestoreScroll(currentTopicId), 500);
+
+
 
 
 
