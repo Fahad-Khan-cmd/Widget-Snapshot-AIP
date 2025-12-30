@@ -9249,12 +9249,9 @@ function getCurrentForumTopicUrl() {
     mainWidgetLoader = document.createElement('div');
     mainWidgetLoader.id = 'governance-widgets-main-loader';
     mainWidgetLoader.className = 'governance-widgets-main-loader';
-    mainWidgetLoader.innerHTML = `
-      <div class="loader-content">
-        <div class="loading-spinner"></div>
-        <span class="loader-text">Loading governance proposals...</span>
-      </div>
-    `;
+   // ------------------ xyz html -------------------
+
+
     
     // Insert loader at widget insertion point
     if (firstPost && firstPost.parentNode) {
