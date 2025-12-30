@@ -3,7 +3,42 @@ import { apiInitializer } from "discourse/lib/api";
 let DISABLE_GOVERNANCE_LOADER = true;
 
 
+// ----------------------- xyz -------------
+// -----------------------------
+// SAVE SCROLL POSITION
+// -----------------------------
 
+function hardRestoreScroll(topicId) {
+  const key = `topic-scroll-${topicId}`;
+  const y = sessionStorage.getItem(key);
+  if (!y) return;
+
+  let attempts = 0;
+
+  const force = () => {
+    window.scrollTo(0, parseInt(y, 10));
+    attempts++;
+
+    if (attempts < 10) {
+      requestAnimationFrame(force);
+    }
+  };
+
+  requestAnimationFrame(force);
+}
+
+
+
+
+window.addEventListener("scroll", () => {
+  const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
+  if (!match) return;
+
+  sessionStorage.setItem(
+    `topic-scroll-${match[1]}`,
+    window.scrollY
+  );
+});
 
 
 
@@ -11745,42 +11780,7 @@ document.addEventListener("click", (e) => {
 
 
 
-// ----------------------- xyz -------------
-// -----------------------------
-// SAVE SCROLL POSITION
-// -----------------------------
 
-function hardRestoreScroll(topicId) {
-  const key = `topic-scroll-${topicId}`;
-  const y = sessionStorage.getItem(key);
-  if (!y) return;
-
-  let attempts = 0;
-
-  const force = () => {
-    window.scrollTo(0, parseInt(y, 10));
-    attempts++;
-
-    if (attempts < 10) {
-      requestAnimationFrame(force);
-    }
-  };
-
-  requestAnimationFrame(force);
-}
-
-
-
-
-window.addEventListener("scroll", () => {
-  const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
-  if (!match) return;
-
-  sessionStorage.setItem(
-    `topic-scroll-${match[1]}`,
-    window.scrollY
-  );
-});
 
 
 
