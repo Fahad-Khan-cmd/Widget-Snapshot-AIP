@@ -11887,41 +11887,95 @@ document.addEventListener("click", (e) => {
 
 
 
+// =====================================================
+// 🧠 PAGE CHANGE HANDLER (BACKUP + WIDGET LOGIC)
+// =====================================================
 
-// ============================================
-// 5. DISCOURSE API INTEGRATION (agar aap use kar rahe hain)
-// ============================================
-
-// Agar aap Discourse API use kar rahe hain toh yeh part
 api.onPageChange(() => {
-  
-  // Remove post number from URL
+
+setTimeout(() => {
+  hardRestoreScroll(currentTopicId);
+}, 300);
+
+setTimeout(() => {
+  hardRestoreScroll(currentTopicId);
+}, 800);
+
+
+
+
+  removeGovernanceLoader();
+
+  currentVisibleProposal = null;
   const path = window.location.pathname;
-  const cleanPath = removePostNumberFromUrl(path);
-  
-  if (path !== cleanPath) {
+
+  // ------------------------------------------
+  // 🔒 Remove /postNumber (URL clean only)
+  // ------------------------------------------
+  const postMatch = path.match(/^(\/t\/[^\/]+\/\d+)\/\d+/);
+  if (postMatch) {
+    const cleanPath = postMatch[1];
     history.replaceState({}, "", cleanPath);
     console.log("🟢 [TOPIC] Removed post number from URL:", cleanPath);
   }
-  
-  // Remove hash fragment
+
+  // ------------------------------------------
+  // Remove hash fragment (#post-*)
+  // ------------------------------------------
   if (window.location.hash.startsWith("#post-")) {
     history.replaceState(null, "", window.location.pathname);
     console.log("🟢 [TOPIC] Removed hash fragment");
   }
-  
-  // Hard restore scroll
-  const topicMatch = path.match(/^\/t\/[^\/]+\/(\d+)/);
-  const topicId = topicMatch ? topicMatch[1] : null;
-  
-  if (topicId) {
-    setTimeout(() => hardRestoreScroll(topicId), 300);
-    setTimeout(() => hardRestoreScroll(topicId), 800);
-  }
-  
-  // Rest of your existing onPageChange code...
-});
 
+  // ------------------------------------------
+  // Clean up widgets if not on topic page
+  // ------------------------------------------
+  const isTopicPage = /^\/t\//.test(path);
+  if (!isTopicPage) {
+    document
+      .querySelectorAll(".tally-status-widget-container")
+      .forEach(w => w.remove());
+
+    const container = document.getElementById("governance-widgets-wrapper");
+    if (container) container.remove();
+
+    widgetSetupCompleted = false;
+    currentTopicId = null;
+    return;
+  }
+
+  // ------------------------------------------
+  // Detect topic
+  // ------------------------------------------
+  const topicMatch = path.match(/^\/t\/[^\/]+\/(\d+)/);
+  const newTopicId = topicMatch ? topicMatch[1] : null;
+
+  if (!newTopicId) return;
+
+  // Same topic
+  if (currentTopicId === newTopicId) {
+    setupTopicWatcher();
+    setupGlobalComposerDetection();
+
+    // 🔥 HARD RESTORE (snapshot widget fix)
+    setTimeout(() => hardRestoreScroll(currentTopicId), 300);
+    setTimeout(() => hardRestoreScroll(currentTopicId), 800);
+
+    return;
+  }
+
+  // ------------------------------------------
+  // Topic changed
+  // ------------------------------------------
+  currentTopicId = newTopicId;
+  widgetSetupCompleted = false;
+
+  setupTopicWatcher();
+  setupGlobalComposerDetection();
+
+  // 🔥 FINAL SCROLL RESTORE (AFTER everything)
+  setTimeout(() => hardRestoreScroll(currentTopicId), 1200);
+});
 
 });
 
