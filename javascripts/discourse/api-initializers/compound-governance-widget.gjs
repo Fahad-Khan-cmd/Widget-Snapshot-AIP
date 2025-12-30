@@ -11879,7 +11879,6 @@ document.addEventListener("click", (e) => {
     setTimeout(() => restoreScrollToLastPost(currentTopicId), 1200);
   });
 });
-});
 
 
 
