@@ -10,6 +10,7 @@ let DISABLE_GOVERNANCE_LOADER = true;
 
 
 
+
 console.log("✅ Aave Governance Widget: JavaScript file loaded!");
 let topicWatcher = null;
 let globalComposerObserver = null;
@@ -11748,43 +11749,40 @@ document.addEventListener("click", (e) => {
 // -----------------------------
 // SAVE SCROLL POSITION
 // -----------------------------
-function saveLastReadPost(topicId, postId) {
-  localStorage.setItem(`lastReadPost_${topicId}`, postId);
-}
-
-function getLastReadPost(topicId) {
-  return localStorage.getItem(`lastReadPost_${topicId}`);
-}
-
-
 
 function hardRestoreScroll(topicId) {
-  const lastReadPostId = getLastReadPost(topicId);
+  const key = `topic-scroll-${topicId}`;
+  const y = sessionStorage.getItem(key);
+  if (!y) return;
 
-  if (lastReadPostId) {
-    const postEl = document.getElementById(`post-${lastReadPostId}`);
-    if (postEl) {
-      postEl.scrollIntoView({ behavior: 'auto', block: 'start' });
-      console.log(`🔵 [SCROLL] Restored to last read post: ${lastReadPostId}`);
-      return;
+  let attempts = 0;
+
+  const force = () => {
+    window.scrollTo(0, parseInt(y, 10));
+    attempts++;
+
+    if (attempts < 10) {
+      requestAnimationFrame(force);
     }
-  }
+  };
 
-  // Agar last read post nahi mila, top pe scroll
-  window.scrollTo({ top: 0, behavior: 'auto' });
+  requestAnimationFrame(force);
 }
 
 
 
-function attachPostReadListeners() {
-  document.querySelectorAll(".post").forEach(post => {
-    post.addEventListener("mouseenter", () => {
-      const topicId = currentTopicId;
-      const postId = post.dataset.postId || post.id.replace('post-', '');
-      saveLastReadPost(topicId, postId);
-    });
-  });
-}
+
+window.addEventListener("scroll", () => {
+  const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
+  if (!match) return;
+
+  sessionStorage.setItem(
+    `topic-scroll-${match[1]}`,
+    window.scrollY
+  );
+});
+
+
 
 
 
@@ -11794,15 +11792,13 @@ function attachPostReadListeners() {
 
 api.onPageChange(() => {
 
-setupTopicWatcher();
-setupGlobalComposerDetection();
+setTimeout(() => {
+  hardRestoreScroll(currentTopicId);
+}, 300);
 
-// ✅ Attach listeners to posts
-attachPostReadListeners();
-
-// ✅ Scroll restore after posts are rendered
-setTimeout(() => hardRestoreScroll(currentTopicId), 500);
-
+setTimeout(() => {
+  hardRestoreScroll(currentTopicId);
+}, 800);
 
 
 
