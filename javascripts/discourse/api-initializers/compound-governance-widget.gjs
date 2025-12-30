@@ -11855,7 +11855,6 @@ api.onPageChange(() => {
   setupGlobalComposerDetection();
 
   // 🔥 FINAL SCROLL RESTORE (AFTER everything)
-  setTimeout(() => hardRestoreScroll(currentTopicId), 300);
   setTimeout(() => hardRestoreScroll(currentTopicId), 800);
 });
 
