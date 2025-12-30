@@ -5,16 +5,6 @@ let DISABLE_GOVERNANCE_LOADER = true;
 
 // ----------------------- xyz -------------
 
-function saveTopicScrollPosition() {
-  const path = window.location.pathname;
-  if (!path.startsWith("/t/")) return;
-
-  sessionStorage.setItem(
-    "topic-scroll:" + path,
-    String(window.scrollY)
-  );
-}
-
 function restoreTopicScrollPosition() {
   const path = window.location.pathname;
   if (!path.startsWith("/t/")) return;
@@ -22,20 +12,21 @@ function restoreTopicScrollPosition() {
   const saved = sessionStorage.getItem("topic-scroll:" + path);
   if (!saved) return;
 
-  requestAnimationFrame(() => {
-    window.scrollTo(0, parseInt(saved, 10));
-  });
+  const y = parseInt(saved, 10);
+
+  // Discourse DOM ke liye retry
+  let attempts = 0;
+  const tryRestore = () => {
+    attempts++;
+    window.scrollTo(0, y);
+
+    if (attempts < 3) {
+      requestAnimationFrame(tryRestore);
+    }
+  };
+
+  requestAnimationFrame(tryRestore);
 }
-
-
-let scrollSaveTimeout = null;
-
-window.addEventListener("scroll", () => {
-  if (!window.location.pathname.startsWith("/t/")) return;
-
-  clearTimeout(scrollSaveTimeout);
-  scrollSaveTimeout = setTimeout(saveTopicScrollPosition, 200);
-});
 
 
 
@@ -11778,8 +11769,9 @@ document.addEventListener("click", (e) => {
 // =====================================================
 api.onPageChange(() => {
 
-  restoreTopicScrollPosition();
-
+setTimeout(() => {
+    restoreTopicScrollPosition();
+  }, 50);
   removeGovernanceLoader();
 
   // Reset current proposal
