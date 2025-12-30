@@ -7,43 +7,40 @@ let DISABLE_GOVERNANCE_LOADER = true;
 // -----------------------------
 // SAVE SCROLL POSITION
 // -----------------------------
+function hardRestoreScroll(topicId) {
+  const key = `topic-scroll-${topicId}`;
+  const y = sessionStorage.getItem(key);
+  if (!y) return;
+
+  let attempts = 0;
+
+  const force = () => {
+    window.scrollTo(0, parseInt(y, 10));
+    attempts++;
+
+    if (attempts < 10) {
+      requestAnimationFrame(force);
+    }
+  };
+
+  requestAnimationFrame(force);
+}
+
+
+
 window.addEventListener("scroll", () => {
-  const path = window.location.pathname;
-  if (!path.startsWith("/t/")) return;
+  const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
+  if (!match) return;
 
   sessionStorage.setItem(
-    "topic-scroll:" + path,
-    window.scrollY.toString()
+    `topic-scroll-${match[1]}`,
+    window.scrollY
   );
 });
 
 
-// -----------------------------
-// RESTORE SCROLL AFTER TOPIC LOAD
-// -----------------------------
-function forceRestoreScrollAfterTopicLoad() {
-  const path = window.location.pathname;
-  if (!path.startsWith("/t/")) return;
 
-  const saved = sessionStorage.getItem("topic-scroll:" + path);
-  if (!saved) return;
 
-  const y = parseInt(saved, 10);
-  let tries = 0;
-
-  const forceScroll = () => {
-    tries++;
-    window.scrollTo(0, y);
-
-    if (tries < 8) {
-      requestAnimationFrame(forceScroll);
-    }
-  };
-
-  setTimeout(() => {
-    requestAnimationFrame(forceScroll);
-  }, 150);
-}
 
 
 
@@ -11786,12 +11783,7 @@ document.addEventListener("click", (e) => {
 // 🧠 PAGE CHANGE HANDLER (BACKUP + WIDGET LOGIC)
 // =====================================================
 
-
 api.onPageChange(() => {
-
-  setTimeout(() => {
-    restoreTopicScrollPosition();
-  }, 50);
 
   removeGovernanceLoader();
 
@@ -11834,25 +11826,39 @@ api.onPageChange(() => {
   }
 
   // ------------------------------------------
-  // Detect topic change
+  // Detect topic
   // ------------------------------------------
   const topicMatch = path.match(/^\/t\/[^\/]+\/(\d+)/);
-  const newTopicId = topicMatch ? topicMatch[1] : path;
+  const newTopicId = topicMatch ? topicMatch[1] : null;
 
-  if (currentTopicId && currentTopicId === newTopicId) {
+  if (!newTopicId) return;
+
+  // Same topic
+  if (currentTopicId === newTopicId) {
     setupTopicWatcher();
     setupGlobalComposerDetection();
+
+    // 🔥 HARD RESTORE (snapshot widget fix)
+    setTimeout(() => hardRestoreScroll(currentTopicId), 300);
+    setTimeout(() => hardRestoreScroll(currentTopicId), 800);
+
     return;
   }
 
-  widgetSetupCompleted = false;
+  // ------------------------------------------
+  // Topic changed
+  // ------------------------------------------
   currentTopicId = newTopicId;
+  widgetSetupCompleted = false;
 
   setupTopicWatcher();
   setupGlobalComposerDetection();
 
-  forceRestoreScrollAfterTopicLoad();
+  // 🔥 FINAL SCROLL RESTORE (AFTER everything)
+  setTimeout(() => hardRestoreScroll(currentTopicId), 300);
+  setTimeout(() => hardRestoreScroll(currentTopicId), 800);
 });
+
 
 });
 
