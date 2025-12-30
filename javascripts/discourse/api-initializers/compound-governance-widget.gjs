@@ -3,6 +3,37 @@ import { apiInitializer } from "discourse/lib/api";
 let DISABLE_GOVERNANCE_LOADER = true;
 
 
+// discourse-custom-topic-navigation.js
+(function() {
+  document.addEventListener('click', function(e) {
+    let target = e.target;
+    
+    // Find the topic link
+    while (target && target !== document) {
+      if (target.matches('a.title.raw-link.raw-topic-link')) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Extract topic ID from href
+        const href = target.getAttribute('href');
+        const match = href.match(/\/t\/([^\/]+)/);
+        
+        if (match) {
+          const topicId = match[1];
+          // Navigate to topic start
+          window.location.href = `/t/${topicId}`;
+        }
+        return;
+      }
+      target = target.parentNode;
+    }
+  }, true);
+})();
+
+
+
+
+
 
 
 // ----------------------- xyz -------------
@@ -10,67 +41,46 @@ let DISABLE_GOVERNANCE_LOADER = true;
 // SAVE SCROLL POSITION
 // -----------------------------
 
-
-function restoreScrollToLastPost(topicId) {
-  const lastPostId = sessionStorage.getItem(`topic-last-post-${topicId}`);
-  if (!lastPostId) return;
-
-  const post = document.getElementById(`post-${lastPostId}`);
-  if (!post) return;
+function hardRestoreScroll(topicId) {
+  const key = `topic-scroll-${topicId}`;
+  const y = sessionStorage.getItem(key);
+  if (!y) return;
 
   let attempts = 0;
-  const maxAttempts = 20;
 
   const force = () => {
-    post.scrollIntoView({ behavior: "auto", block: "start" });
+    window.scrollTo(0, parseInt(y, 10));
     attempts++;
-    if (attempts < maxAttempts) {
+
+    if (attempts < 10) {
       requestAnimationFrame(force);
     }
   };
+
   requestAnimationFrame(force);
 }
 
 
 
 
-
-// -----------------------------
-// SAVE SCROLL & CURRENT COMMENT
-// -----------------------------
 window.addEventListener("scroll", () => {
   const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
   if (!match) return;
-  const topicId = match[1];
 
-  const posts = document.querySelectorAll(".post");
-  for (let post of posts) {
-    const rect = post.getBoundingClientRect();
-    if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
-      const postId = post.dataset.postId || post.id.replace("post-", "");
-      sessionStorage.setItem(`topic-last-post-${topicId}`, postId);
-      history.replaceState(null, "", `/t/${topicId}/${postId}`);
-      break;
-    }
-  }
+  sessionStorage.setItem(
+    `topic-scroll-${match[1]}`,
+    window.scrollY
+  );
 });
 
 
 
 
-// -------------------------
-  // COMMENT CLICK TRACKER
-  // -------------------------
-  document.querySelectorAll(".post").forEach(post => {
-    post.addEventListener("click", () => {
-      const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
-      if (!match) return;
-      const topicId = match[1];
-      const postId = post.dataset.postId || post.id.replace("post-", "");
-      sessionStorage.setItem(`topic-last-post-${topicId}`, postId);
-      history.replaceState(null, "", `/t/${topicId}/${postId}`);
-    });
-  });
+
+
+
+
+
 
 
 
@@ -11816,68 +11826,91 @@ document.addEventListener("click", (e) => {
 // 🧠 PAGE CHANGE HANDLER (BACKUP + WIDGET LOGIC)
 // =====================================================
 
- api.onPageChange(() => {
-    const path = window.location.pathname;
+api.onPageChange(() => {
 
-    // 🔹 Detect topic
-    const topicMatch = path.match(/^\/t\/[^\/]+\/(\d+)/);
-    const newTopicId = topicMatch ? topicMatch[1] : null;
-    if (!newTopicId) return;
+setTimeout(() => {
+  hardRestoreScroll(currentTopicId);
+}, 300);
 
-    currentTopicId = newTopicId;
+setTimeout(() => {
+  hardRestoreScroll(currentTopicId);
+}, 800);
+
+
+
+
+  removeGovernanceLoader();
+
+  currentVisibleProposal = null;
+  const path = window.location.pathname;
+
+  // ------------------------------------------
+  // 🔒 Remove /postNumber (URL clean only)
+  // ------------------------------------------
+  const postMatch = path.match(/^(\/t\/[^\/]+\/\d+)\/\d+/);
+  if (postMatch) {
+    const cleanPath = postMatch[1];
+    history.replaceState({}, "", cleanPath);
+    console.log("🟢 [TOPIC] Removed post number from URL:", cleanPath);
+  }
+
+  // ------------------------------------------
+  // Remove hash fragment (#post-*)
+  // ------------------------------------------
+  if (window.location.hash.startsWith("#post-")) {
+    history.replaceState(null, "", window.location.pathname);
+    console.log("🟢 [TOPIC] Removed hash fragment");
+  }
+
+  // ------------------------------------------
+  // Clean up widgets if not on topic page
+  // ------------------------------------------
+  const isTopicPage = /^\/t\//.test(path);
+  if (!isTopicPage) {
+    document
+      .querySelectorAll(".tally-status-widget-container")
+      .forEach(w => w.remove());
+
+    const container = document.getElementById("governance-widgets-wrapper");
+    if (container) container.remove();
+
     widgetSetupCompleted = false;
+    currentTopicId = null;
+    return;
+  }
 
+  // ------------------------------------------
+  // Detect topic
+  // ------------------------------------------
+  const topicMatch = path.match(/^\/t\/[^\/]+\/(\d+)/);
+  const newTopicId = topicMatch ? topicMatch[1] : null;
+
+  if (!newTopicId) return;
+
+  // Same topic
+  if (currentTopicId === newTopicId) {
     setupTopicWatcher();
     setupGlobalComposerDetection();
 
-    // 🔹 FINAL SCROLL RESTORE
-    setTimeout(() => restoreScrollToLastPost(currentTopicId), 1000);
+    // 🔥 HARD RESTORE (snapshot widget fix)
+    setTimeout(() => hardRestoreScroll(currentTopicId), 300);
+    setTimeout(() => hardRestoreScroll(currentTopicId), 800);
 
-    // 🔹 URL CLEANUP
-    const postMatch = path.match(/^(\/t\/[^\/]+\/\d+)\/\d+/);
-    if (postMatch) {
-      const cleanPath = postMatch[1];
-      history.replaceState({}, "", cleanPath);
-      console.log("🟢 [TOPIC] Removed extra post number from URL:", cleanPath);
-    }
-    if (window.location.hash.startsWith("#post-")) {
-      history.replaceState(null, "", window.location.pathname);
-      console.log("🟢 [TOPIC] Removed hash fragment");
-    }
+    return;
+  }
 
-    // 🔹 CLEAN UP WIDGETS IF NOT ON TOPIC PAGE
-    const isTopicPage = /^\/t\//.test(path);
-    if (!isTopicPage) {
-      document
-        .querySelectorAll(".tally-status-widget-container")
-        .forEach(w => w.remove());
+  // ------------------------------------------
+  // Topic changed
+  // ------------------------------------------
+  currentTopicId = newTopicId;
+  widgetSetupCompleted = false;
 
-      const container = document.getElementById("governance-widgets-wrapper");
-      if (container) container.remove();
+  setupTopicWatcher();
+  setupGlobalComposerDetection();
 
-      widgetSetupCompleted = false;
-      currentTopicId = null;
-      return;
-    }
-
-    // 🔹 SAME TOPIC LOGIC
-    if (currentTopicId === newTopicId) {
-      setupTopicWatcher();
-      setupGlobalComposerDetection();
-      setTimeout(() => restoreScrollToLastPost(currentTopicId), 300);
-      setTimeout(() => restoreScrollToLastPost(currentTopicId), 800);
-      return;
-    }
-
-    // 🔹 NEW TOPIC LOGIC
-    currentTopicId = newTopicId;
-    widgetSetupCompleted = false;
-
-    setupTopicWatcher();
-    setupGlobalComposerDetection();
-
-    setTimeout(() => restoreScrollToLastPost(currentTopicId), 1200);
-  });
+  // 🔥 FINAL SCROLL RESTORE (AFTER everything)
+  setTimeout(() => hardRestoreScroll(currentTopicId), 1200);
+});
 });
 
 
