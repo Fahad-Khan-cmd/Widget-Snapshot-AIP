@@ -11785,9 +11785,7 @@ document.addEventListener("click", (e) => {
 
 api.onPageChange(() => {
 
-// 🔥 FINAL SCROLL RESTORE (AFTER everything)
-  setTimeout(() => hardRestoreScroll(currentTopicId), 1200);
-});
+
 
   removeGovernanceLoader();
 
@@ -11858,7 +11856,9 @@ api.onPageChange(() => {
   setupTopicWatcher();
   setupGlobalComposerDetection();
 
-  
+  // 🔥 FINAL SCROLL RESTORE (AFTER everything)
+  setTimeout(() => hardRestoreScroll(currentTopicId), 1200);
+});
 
 
 });
