@@ -3,13 +3,9 @@ import { apiInitializer } from "discourse/lib/api";
 let DISABLE_GOVERNANCE_LOADER = true;
 
 
+
 // discourse-custom-topic-navigation.js
 (function() {
-  'use strict';
-  
-  // ============================================
-  // 1. TOPIC LIST LINKS FIX (Click se bachana)
-  // ============================================
   document.addEventListener('click', function(e) {
     let target = e.target;
     
@@ -19,134 +15,66 @@ let DISABLE_GOVERNANCE_LOADER = true;
         e.preventDefault();
         e.stopPropagation();
         
-        // Extract clean topic URL
+        // Extract topic ID from href
         const href = target.getAttribute('href');
-        const cleanUrl = getCleanTopicUrl(href);
+        const match = href.match(/\/t\/([^\/]+)/);
         
-        if (cleanUrl) {
+        if (match) {
+          const topicId = match[1];
           // Navigate to topic start
-          window.location.href = cleanUrl;
+          window.location.href = `/t/${topicId}`;
         }
         return;
       }
       target = target.parentNode;
     }
   }, true);
-  
-  // ============================================
-  // 2. BACK/FORWARD BUTTON HANDLING
-  // ============================================
-  window.addEventListener('popstate', function(event) {
-    // Thoda delay karke check karo taaki Discourse apna loading complete kare
-    setTimeout(() => {
-      const currentPath = window.location.pathname;
-      const cleanPath = removePostNumberFromUrl(currentPath);
-      
-      // Agar URL mein post number hai toh usko hatao
-      if (currentPath !== cleanPath) {
-        console.log('🔄 [POPSTATE] Cleaning URL from:', currentPath, 'to:', cleanPath);
-        history.replaceState({}, '', cleanPath);
-        
-        // Scroll restore karo (agar saved hai toh)
-        const topicId = extractTopicId(cleanPath);
-        if (topicId) {
-          setTimeout(() => hardRestoreScroll(topicId), 100);
-        }
-      }
-    }, 50);
-  });
-  
-  // ============================================
-  // 3. ON PAGE LOAD - INITIAL CLEANUP
-  // ============================================
-  document.addEventListener('DOMContentLoaded', function() {
-    // Initial URL cleanup
-    setTimeout(() => {
-      const currentPath = window.location.pathname;
-      const cleanPath = removePostNumberFromUrl(currentPath);
-      
-      if (currentPath !== cleanPath) {
-        console.log('🔧 [INITIAL] Cleaning URL:', currentPath, '→', cleanPath);
-        history.replaceState({}, '', cleanPath);
-      }
-    }, 100);
-  });
-  
-  // ============================================
-  // HELPER FUNCTIONS
-  // ============================================
-  
-  function getCleanTopicUrl(url) {
-    if (!url) return null;
-    // Remove post number from URL
-    // /t/topic-slug/topic-id/post-number → /t/topic-slug/topic-id
-    const parts = url.split('/');
-    if (parts.length >= 5) {
-      // Keep only first 4 parts: /t/slug/id
-      return parts.slice(0, 4).join('/');
-    }
-    return url;
-  }
-  
-  function removePostNumberFromUrl(path) {
-    // Remove post number from path
-    const match = path.match(/^(\/t\/[^\/]+\/\d+)\/\d+/);
-    return match ? match[1] : path;
-  }
-  
-  function extractTopicId(path) {
-    const match = path.match(/\/t\/[^\/]+\/(\d+)/);
-    return match ? match[1] : null;
-  }
-  
 })();
 
-// ============================================
-// 4. SCROLL POSITION MANAGEMENT
-// ============================================
+
+
+
+
+
+
+// ----------------------- xyz -------------
+// -----------------------------
+// SAVE SCROLL POSITION
+// -----------------------------
 
 function hardRestoreScroll(topicId) {
   const key = `topic-scroll-${topicId}`;
   const y = sessionStorage.getItem(key);
   if (!y) return;
-  
-  console.log('📜 Restoring scroll for topic', topicId, 'to position:', y);
-  
+
   let attempts = 0;
-  const maxAttempts = 15;
-  
-  const forceScroll = () => {
+
+  const force = () => {
     window.scrollTo(0, parseInt(y, 10));
     attempts++;
-    
-    // Current scroll position check
-    const currentY = window.scrollY;
-    const targetY = parseInt(y, 10);
-    
-    // Agar scroll position match nahi karti, try again
-    if (Math.abs(currentY - targetY) > 50 && attempts < maxAttempts) {
-      requestAnimationFrame(forceScroll);
-    } else if (attempts >= maxAttempts) {
-      console.log('⚠️ Max scroll attempts reached');
+
+    if (attempts < 10) {
+      requestAnimationFrame(force);
     }
   };
-  
-  requestAnimationFrame(forceScroll);
+
+  requestAnimationFrame(force);
 }
 
-// Save scroll position
+
+
+
 window.addEventListener("scroll", () => {
   const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
   if (!match) return;
-  
-  const topicId = match[1];
-  const scrollY = window.scrollY;
-  
-  // Only save if scrolled beyond a threshold
-  if (scrollY > 100) {
-    sessionStorage.setItem(`topic-scroll-${topicId}`, scrollY);
-  }
+
+  sessionStorage.setItem(
+    `topic-scroll-${match[1]}`,
+    window.scrollY
+  );
 });
+
+
 
 
 
