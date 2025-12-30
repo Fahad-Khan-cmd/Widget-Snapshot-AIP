@@ -3,6 +3,41 @@ import { apiInitializer } from "discourse/lib/api";
 let DISABLE_GOVERNANCE_LOADER = true;
 
 
+// ----------------------- xyz -------------
+
+function saveTopicScrollPosition() {
+  const path = window.location.pathname;
+  if (!path.startsWith("/t/")) return;
+
+  sessionStorage.setItem(
+    "topic-scroll:" + path,
+    String(window.scrollY)
+  );
+}
+
+function restoreTopicScrollPosition() {
+  const path = window.location.pathname;
+  if (!path.startsWith("/t/")) return;
+
+  const saved = sessionStorage.getItem("topic-scroll:" + path);
+  if (!saved) return;
+
+  requestAnimationFrame(() => {
+    window.scrollTo(0, parseInt(saved, 10));
+  });
+}
+
+
+let scrollSaveTimeout = null;
+
+window.addEventListener("scroll", () => {
+  if (!window.location.pathname.startsWith("/t/")) return;
+
+  clearTimeout(scrollSaveTimeout);
+  scrollSaveTimeout = setTimeout(saveTopicScrollPosition, 200);
+});
+
+
 
 
 console.log("✅ Aave Governance Widget: JavaScript file loaded!");
@@ -11742,6 +11777,9 @@ document.addEventListener("click", (e) => {
 // 🧠 PAGE CHANGE HANDLER (BACKUP + WIDGET LOGIC)
 // =====================================================
 api.onPageChange(() => {
+
+  restoreTopicScrollPosition();
+
   removeGovernanceLoader();
 
   // Reset current proposal
