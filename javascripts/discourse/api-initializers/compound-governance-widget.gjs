@@ -1,21 +1,6 @@
 import { apiInitializer } from "discourse/lib/api";
 
 
-function removeGovernanceLoader() {
-  const loader = document.getElementById("governance-widgets-main-loader");
-  if (loader) {
-    loader.remove();
-    console.log("🧹 [LOADER] Governance loader removed");
-  }
-}
-
-document.addEventListener("click", (e) => {
-  const link = e.target.closest("a.raw-topic-link");
-  if (!link) return;
-
-  // Topic click detected
-  removeGovernanceLoader();
-});
 
 
 // ------------------------------
@@ -11767,6 +11752,22 @@ function getCurrentForumTopicUrl() {
 
   // Re-initialize topic widget on page changes
   
+// -------------xyz loader --------------
+function removeGovernanceLoader() {
+  const loader = document.getElementById("governance-widgets-main-loader");
+  if (loader) {
+    loader.remove();
+    console.log("🧹 [LOADER] Governance loader removed");
+  }
+}
+
+document.addEventListener("click", (e) => {
+  const link = e.target.closest("a.raw-topic-link");
+  if (!link) return;
+
+  // Topic click detected
+  removeGovernanceLoader();
+});
 
 
 // =====================================================
