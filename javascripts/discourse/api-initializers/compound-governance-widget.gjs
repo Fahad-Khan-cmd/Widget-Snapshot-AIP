@@ -11785,26 +11785,26 @@ document.addEventListener("click", (e) => {
 // =====================================================
 // 🧠 PAGE CHANGE HANDLER (BACKUP + WIDGET LOGIC)
 // =====================================================
+
+
 api.onPageChange(() => {
 
-setTimeout(() => {
+  setTimeout(() => {
     restoreTopicScrollPosition();
   }, 50);
+
   removeGovernanceLoader();
 
-  // Reset current proposal
   currentVisibleProposal = null;
-
   const path = window.location.pathname;
 
   // ------------------------------------------
-  // 🔒 Remove /postNumber (safety net)
+  // 🔒 Remove /postNumber (URL clean only)
   // ------------------------------------------
   const postMatch = path.match(/^(\/t\/[^\/]+\/\d+)\/\d+/);
   if (postMatch) {
     const cleanPath = postMatch[1];
     history.replaceState({}, "", cleanPath);
-    window.scrollTo(0, 0);
     console.log("🟢 [TOPIC] Removed post number from URL:", cleanPath);
   }
 
@@ -11813,7 +11813,6 @@ setTimeout(() => {
   // ------------------------------------------
   if (window.location.hash.startsWith("#post-")) {
     history.replaceState(null, "", window.location.pathname);
-    window.scrollTo(0, 0);
     console.log("🟢 [TOPIC] Removed hash fragment");
   }
 
@@ -11822,8 +11821,6 @@ setTimeout(() => {
   // ------------------------------------------
   const isTopicPage = /^\/t\//.test(path);
   if (!isTopicPage) {
-    console.log("🔍 [TOPIC] Non-topic page - cleaning up widgets");
-
     document
       .querySelectorAll(".tally-status-widget-container")
       .forEach(w => w.remove());
@@ -11843,21 +11840,18 @@ setTimeout(() => {
   const newTopicId = topicMatch ? topicMatch[1] : path;
 
   if (currentTopicId && currentTopicId === newTopicId) {
-    console.log(`🔵 [TOPIC] Same topic (${newTopicId})`);
     setupTopicWatcher();
     setupGlobalComposerDetection();
     return;
   }
 
-  console.log(`🔵 [TOPIC] Topic changed to ${newTopicId}`);
   widgetSetupCompleted = false;
   currentTopicId = newTopicId;
 
   setupTopicWatcher();
   setupGlobalComposerDetection();
 
-forceRestoreScrollAfterTopicLoad();
-
+  forceRestoreScrollAfterTopicLoad();
 });
 
 });
