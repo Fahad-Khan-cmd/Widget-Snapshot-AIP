@@ -4,8 +4,24 @@ let DISABLE_GOVERNANCE_LOADER = true;
 
 
 // ----------------------- xyz -------------
+// -----------------------------
+// SAVE SCROLL POSITION
+// -----------------------------
+window.addEventListener("scroll", () => {
+  const path = window.location.pathname;
+  if (!path.startsWith("/t/")) return;
 
-function restoreTopicScrollPosition() {
+  sessionStorage.setItem(
+    "topic-scroll:" + path,
+    window.scrollY.toString()
+  );
+});
+
+
+// -----------------------------
+// RESTORE SCROLL AFTER TOPIC LOAD
+// -----------------------------
+function forceRestoreScrollAfterTopicLoad() {
   const path = window.location.pathname;
   if (!path.startsWith("/t/")) return;
 
@@ -13,20 +29,22 @@ function restoreTopicScrollPosition() {
   if (!saved) return;
 
   const y = parseInt(saved, 10);
+  let tries = 0;
 
-  // Discourse DOM ke liye retry
-  let attempts = 0;
-  const tryRestore = () => {
-    attempts++;
+  const forceScroll = () => {
+    tries++;
     window.scrollTo(0, y);
 
-    if (attempts < 3) {
-      requestAnimationFrame(tryRestore);
+    if (tries < 8) {
+      requestAnimationFrame(forceScroll);
     }
   };
 
-  requestAnimationFrame(tryRestore);
+  setTimeout(() => {
+    requestAnimationFrame(forceScroll);
+  }, 150);
 }
+
 
 
 
@@ -11837,6 +11855,9 @@ setTimeout(() => {
 
   setupTopicWatcher();
   setupGlobalComposerDetection();
+
+forceRestoreScrollAfterTopicLoad();
+
 });
 
 });
