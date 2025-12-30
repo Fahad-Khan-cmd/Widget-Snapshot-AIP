@@ -1,6 +1,23 @@
 import { apiInitializer } from "discourse/lib/api";
 
 
+function removeGovernanceLoader() {
+  const loader = document.getElementById("governance-widgets-main-loader");
+  if (loader) {
+    loader.remove();
+    console.log("🧹 [LOADER] Governance loader removed");
+  }
+}
+
+document.addEventListener("click", (e) => {
+  const link = e.target.closest("a.raw-topic-link");
+  if (!link) return;
+
+  // Topic click detected
+  removeGovernanceLoader();
+});
+
+
 // ------------------------------
 // FIX: remove /postNumber from topic list links
 // ------------------------------
@@ -11756,6 +11773,8 @@ function getCurrentForumTopicUrl() {
 // 🧠 PAGE CHANGE HANDLER (BACKUP + WIDGET LOGIC)
 // =====================================================
 api.onPageChange(() => {
+  removeGovernanceLoader();
+
   // Reset current proposal
   currentVisibleProposal = null;
 
