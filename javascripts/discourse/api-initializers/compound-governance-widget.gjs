@@ -1,6 +1,6 @@
 import { apiInitializer } from "discourse/lib/api";
 
-
+let DISABLE_GOVERNANCE_LOADER = true;
 
 
 // ------------------------------
@@ -9246,27 +9246,36 @@ function getCurrentForumTopicUrl() {
     }
     
     // Create loader element
-    mainWidgetLoader = document.createElement('div');
-    mainWidgetLoader.id = 'governance-widgets-main-loader';
-    mainWidgetLoader.className = 'governance-widgets-main-loader';
-   // ------------------ xyz html -------------------
+  // ----------------------------- XYZ Loader----
+if (!DISABLE_GOVERNANCE_LOADER && !mainWidgetLoader) {
 
+  mainWidgetLoader = document.createElement('div');
+  mainWidgetLoader.id = 'governance-widgets-main-loader';
+  mainWidgetLoader.className = 'governance-widgets-main-loader';
+  mainWidgetLoader.innerHTML = `
+    <div class="loader-content">
+      <div class="loading-spinner"></div>
+      <span class="loader-text">Loading governance proposals...</span>
+    </div>
+  `;
 
-    
-    // Insert loader at widget insertion point
-    if (firstPost && firstPost.parentNode) {
-      firstPost.parentNode.insertBefore(mainWidgetLoader, firstPost);
-    } else if (topicBody) {
-      topicBody.insertBefore(mainWidgetLoader, topicBody.firstChild);
-    } else {
-      const mainContent = document.querySelector('main, [role="main"]');
-      if (mainContent) {
-        mainContent.insertBefore(mainWidgetLoader, mainContent.firstChild);
-      }
+  // Insert loader at widget insertion point
+  if (firstPost && firstPost.parentNode) {
+    firstPost.parentNode.insertBefore(mainWidgetLoader, firstPost);
+  } else if (topicBody) {
+    topicBody.insertBefore(mainWidgetLoader, topicBody.firstChild);
+  } else {
+    const mainContent = document.querySelector('main, [role="main"]');
+    if (mainContent) {
+      mainContent.insertBefore(mainWidgetLoader, mainContent.firstChild);
     }
-    
-    console.log("🔵 [LOADER] Main widget loader shown");
   }
+
+  console.log("🔵 [LOADER] Main widget loader shown");
+}
+}
+
+
   
   /**
    * Hide main loader once widgets are rendered
