@@ -3,79 +3,71 @@ import { apiInitializer } from "discourse/lib/api";
 let DISABLE_GOVERNANCE_LOADER = true;
 
 
-// discourse-custom-topic-navigation.js
-(function() {
-  document.addEventListener('click', function(e) {
-    let target = e.target;
 
-    while (target && target !== document) {
-      if (target.matches('a.title.raw-link.raw-topic-link')) {
-        e.preventDefault();
-        e.stopPropagation();
 
-        const href = target.getAttribute('href');
-        const match = href.match(/\/t\/[^\/]+\/(\d+)/);
+(function () {
 
-        if (match) {
+  // =====================================================
+  // 🔗 DIRECT TOPIC NAVIGATION (NO FIRST JUMP)
+  // =====================================================
+  document.addEventListener(
+    "click",
+    function (e) {
+      let target = e.target;
+
+      while (target && target !== document) {
+        if (target.matches("a.title.raw-link.raw-topic-link")) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const href = target.getAttribute("href");
+          const match = href.match(/\/t\/[^\/]+\/(\d+)/);
+          if (!match) return;
+
           const topicId = match[1];
-          const lastPost = sessionStorage.getItem(`topic-last-post-${topicId}`);
 
-          window.location.href = lastPost
-            ? `/t/${topicId}/${lastPost}`
-            : `/t/${topicId}`;
+          // 🔥 last read post number
+          const lastPost = sessionStorage.getItem(
+            `topic-last-post-${topicId}`
+          );
+
+          if (lastPost) {
+            window.location.href = `/t/${topicId}/${lastPost}`;
+          } else {
+            // fallback → first post
+            window.location.href = `/t/${topicId}/${topicId}`;
+          }
+
+          return;
         }
-        return;
+        target = target.parentNode;
       }
-      target = target.parentNode;
-    }
-  }, true);
-})();
+    },
+    true
+  );
 
+  // =====================================================
+  // 💾 SAVE LAST READ POST NUMBER
+  // =====================================================
+  function trackLastReadPost() {
+    document.querySelectorAll(".post").forEach((post) => {
+      post.addEventListener("mouseenter", () => {
+        const topicMatch = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
+        if (!topicMatch) return;
 
+        const topicId = topicMatch[1];
+        const postNumber =
+          post.dataset.postNumber || post.id?.replace("post-", "");
 
+        if (!postNumber) return;
 
-
-
-
-
-// ----------------------- xyz -------------
-// -----------------------------
-// SAVE SCROLL POSITION
-// -----------------------------
-
-function hardRestoreScroll(topicId) {
-  const key = `topic-scroll-${topicId}`;
-  const y = sessionStorage.getItem(key);
-  if (!y) return;
-
-  let attempts = 0;
-
-  const force = () => {
-    window.scrollTo(0, parseInt(y, 10));
-    attempts++;
-
-    if (attempts < 10) {
-      requestAnimationFrame(force);
-    }
-  };
-
-  requestAnimationFrame(force);
-}
-
-
-
-
-window.addEventListener("scroll", () => {
-  const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)\/(\d+)/);
-  if (!match) return;
-
-  const topicId = match[1];
-  const postNumber = match[2];
-
-  sessionStorage.setItem(`topic-last-post-${topicId}`, postNumber);
-  sessionStorage.setItem(`topic-scroll-${topicId}`, window.scrollY);
-});
-
+        sessionStorage.setItem(
+          `topic-last-post-${topicId}`,
+          postNumber
+        );
+      });
+    });
+  }
 
 
 
@@ -11832,13 +11824,14 @@ document.addEventListener("click", (e) => {
 
 api.onPageChange(() => {
 
-setTimeout(() => {
-  hardRestoreScroll(currentTopicId);
-}, 300);
+const path = window.location.pathname;
 
-setTimeout(() => {
-  hardRestoreScroll(currentTopicId);
-}, 800);
+    // Not a topic page → cleanup
+    if (!/^\/t\//.test(path)) return;
+
+    // Track posts after render
+    setTimeout(trackLastReadPost, 300);
+    setTimeout(trackLastReadPost, 800);
 
 
 
