@@ -2,14 +2,14 @@ import { apiInitializer } from "discourse/lib/api";
 
 let DISABLE_GOVERNANCE_LOADER = true;
 
-
-
-
+// =====================================================
+// 🔗 CLICK HANDLER + HELPERS (SELF FUNCTION)
+// =====================================================
 (function () {
 
-  // =====================================================
-  // 🔗 DIRECT TOPIC NAVIGATION (NO FIRST JUMP)
-  // =====================================================
+  // ------------------------------
+  // Topic link click interception
+  // ------------------------------
   document.addEventListener(
     "click",
     function (e) {
@@ -26,7 +26,7 @@ let DISABLE_GOVERNANCE_LOADER = true;
 
           const topicId = match[1];
 
-          // 🔥 last read post number
+          // Last read post number
           const lastPost = sessionStorage.getItem(
             `topic-last-post-${topicId}`
           );
@@ -34,10 +34,8 @@ let DISABLE_GOVERNANCE_LOADER = true;
           if (lastPost) {
             window.location.href = `/t/${topicId}/${lastPost}`;
           } else {
-            // fallback → first post
             window.location.href = `/t/${topicId}/${topicId}`;
           }
-
           return;
         }
         target = target.parentNode;
@@ -46,16 +44,16 @@ let DISABLE_GOVERNANCE_LOADER = true;
     true
   );
 
-  // =====================================================
-  // 💾 SAVE LAST READ POST NUMBER
-  // =====================================================
-  function trackLastReadPost() {
+  // ------------------------------
+  // Save last read post
+  // ------------------------------
+  window.trackLastReadPost = function () {
     document.querySelectorAll(".post").forEach((post) => {
       post.addEventListener("mouseenter", () => {
-        const topicMatch = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
-        if (!topicMatch) return;
+        const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
+        if (!match) return;
 
-        const topicId = topicMatch[1];
+        const topicId = match[1];
         const postNumber =
           post.dataset.postNumber || post.id?.replace("post-", "");
 
@@ -67,8 +65,9 @@ let DISABLE_GOVERNANCE_LOADER = true;
         );
       });
     });
-  }
+  };
 
+})();
 
 
 
@@ -11824,14 +11823,25 @@ document.addEventListener("click", (e) => {
 
 api.onPageChange(() => {
 
-const path = window.location.pathname;
 
-    // Not a topic page → cleanup
-    if (!/^\/t\//.test(path)) return;
 
-    // Track posts after render
-    setTimeout(trackLastReadPost, 300);
-    setTimeout(trackLastReadPost, 800);
+ const path = window.location.pathname;
+
+  // Not a topic page → ignore
+  if (!/^\/t\//.test(path)) return;
+
+  // Wait for posts to render
+  setTimeout(() => {
+    if (window.trackLastReadPost) {
+      window.trackLastReadPost();
+    }
+  }, 300);
+
+  setTimeout(() => {
+    if (window.trackLastReadPost) {
+      window.trackLastReadPost();
+    }
+  }, 800);
 
 
 
