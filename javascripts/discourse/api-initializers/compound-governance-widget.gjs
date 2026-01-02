@@ -17,7 +17,9 @@ let DISABLE_GOVERNANCE_LOADER = true;
         // Extract topic ID from href
         const href = target.getAttribute('href');
         const match = href.match(/\/t\/([^\/]+)/);
-        
+
+        console.log("match", match);
+
         if (match) {
           const topicId = match[1];
           // Navigate to topic start
