@@ -11846,7 +11846,6 @@ api.onPageChange(() => {
 
 
 
- const path = window.location.pathname;
 
    const path = window.location.pathname;
   const match = path.match(/^\/t\/[^\/]+\/(\d+)/);
