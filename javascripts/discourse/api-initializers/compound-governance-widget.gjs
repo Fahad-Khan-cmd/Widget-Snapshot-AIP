@@ -6,78 +6,61 @@ let DISABLE_GOVERNANCE_LOADER = true;
 
 
 // discourse-custom-topic-navigation.js
-(function() {
-  document.addEventListener('click', function(e) {
+(function () {
+
+  // --------------------------
+  // TOPIC LINK CLICK OVERRIDE
+  // --------------------------
+  document.addEventListener("click", function (e) {
     let target = e.target;
-    
-    // Find the topic link
+
     while (target && target !== document) {
-      if (target.matches('a.title.raw-link.raw-topic-link')) {
+      if (target.matches("a.title.raw-link.raw-topic-link")) {
         e.preventDefault();
         e.stopPropagation();
-        
-        // Extract topic ID from href
-        const href = target.getAttribute('href');
+
+        const href = target.getAttribute("href");
         const match = href.match(/\/t\/([^\/]+)/);
-
-        console.log("match", match);
-
 
         if (match) {
           const topicId = match[1];
-          // Navigate to topic start
-          window.location.href = /t/${topicId};
+          window.location.href = `/t/${topicId}`;
         }
         return;
-
       }
       target = target.parentNode;
     }
   }, true);
-})();
 
+  // --------------------------
+  // HARD RESTORE SCROLL FUNCTION
+  // --------------------------
+  function hardRestoreScroll(topicId) {
+    const key = `topic-scroll-${topicId}`;
+    const y = sessionStorage.getItem(key);
+    if (!y) return;
 
+    let attempts = 0;
+    const force = () => {
+      window.scrollTo(0, parseInt(y, 10));
+      attempts++;
+      if (attempts < 10) requestAnimationFrame(force);
+    };
+    requestAnimationFrame(force);
+  }
 
+  // --------------------------
+  // SAVE SCROLL POSITION ON SCROLL
+  // --------------------------
+  window.addEventListener("scroll", () => {
+    const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
+    if (!match) return;
 
+    sessionStorage.setItem(`topic-scroll-${match[1]}`, window.scrollY);
+  });
 
+})(); // End of first IIFE
 
-
-// ----------------------- xyz -------------
-// -----------------------------
-// SAVE SCROLL POSITION
-// -----------------------------
-
-function hardRestoreScroll(topicId) {
-  const key = topic-scroll-${topicId};
-  const y = sessionStorage.getItem(key);
-  if (!y) return;
-
-  let attempts = 0;
-
-  const force = () => {
-    window.scrollTo(0, parseInt(y, 10));
-    attempts++;
-
-    if (attempts < 10) {
-      requestAnimationFrame(force);
-    }
-  };
-
-  requestAnimationFrame(force);
-}
-
-
-
-
-window.addEventListener("scroll", () => {
-  const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
-  if (!match) return;
-
-  sessionStorage.setItem(
-    topic-scroll-${match[1]},
-    window.scrollY
-  );
-});
 
 
 
@@ -11827,13 +11810,8 @@ document.addEventListener("click", (e) => {
 
 api.onPageChange(() => {
 
-setTimeout(() => {
-  hardRestoreScroll(currentTopicId);
-}, 300);
-
-setTimeout(() => {
-  hardRestoreScroll(currentTopicId);
-}, 800);
+setTimeout(() => hardRestoreScroll(currentTopicId), 300);
+  setTimeout(() => hardRestoreScroll(currentTopicId), 800);
 
 
 
