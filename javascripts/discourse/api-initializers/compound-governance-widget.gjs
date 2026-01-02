@@ -7,32 +7,30 @@ let DISABLE_GOVERNANCE_LOADER = true;
 (function() {
   document.addEventListener('click', function(e) {
     let target = e.target;
-    
-    // Find the topic link
+
     while (target && target !== document) {
       if (target.matches('a.title.raw-link.raw-topic-link')) {
         e.preventDefault();
         e.stopPropagation();
-        
-        // Extract topic ID from href
+
         const href = target.getAttribute('href');
-        const match = href.match(/\/t\/([^\/]+)/);
-
-        console.log("match", match);
-
+        const match = href.match(/\/t\/[^\/]+\/(\d+)/);
 
         if (match) {
           const topicId = match[1];
-          // Navigate to topic start
-          window.location.href = `/t/${topicId}`;
+          const lastPost = sessionStorage.getItem(`topic-last-post-${topicId}`);
+
+          window.location.href = lastPost
+            ? `/t/${topicId}/${lastPost}`
+            : `/t/${topicId}`;
         }
         return;
-
       }
       target = target.parentNode;
     }
   }, true);
 })();
+
 
 
 
@@ -68,14 +66,16 @@ function hardRestoreScroll(topicId) {
 
 
 window.addEventListener("scroll", () => {
-  const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
+  const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)\/(\d+)/);
   if (!match) return;
 
-  sessionStorage.setItem(
-    `topic-scroll-${match[1]}`,
-    window.scrollY
-  );
+  const topicId = match[1];
+  const postNumber = match[2];
+
+  sessionStorage.setItem(`topic-last-post-${topicId}`, postNumber);
+  sessionStorage.setItem(`topic-scroll-${topicId}`, window.scrollY);
 });
+
 
 
 
