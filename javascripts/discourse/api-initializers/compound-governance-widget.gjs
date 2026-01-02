@@ -3,8 +3,6 @@ import { apiInitializer } from "discourse/lib/api";
 let DISABLE_GOVERNANCE_LOADER = true;
 
 
-
-
 // discourse-custom-topic-navigation.js
 (function () {
 
@@ -20,11 +18,21 @@ let DISABLE_GOVERNANCE_LOADER = true;
         e.stopPropagation();
 
         const href = target.getAttribute("href");
-        const match = href.match(/\/t\/([^\/]+)/);
+        const match = href.match(/\/t\/([^\/]+)\/(\d+)/); // matches /t/<slug>/<topicId>
 
         if (match) {
-          const topicId = match[1];
-          window.location.href = `/t/${topicId}`;
+          const slug = match[1];
+          const topicId = match[2];
+
+          // Check localStorage for last read post
+          const local = localStorage.getItem("topic") ? JSON.parse(localStorage.getItem("topic")) : null;
+          let redirectUrl = `/t/${slug}/${topicId}`;
+
+          if (local && local.topicId == topicId) {
+            if (local.postNumber) redirectUrl += `/${local.postNumber}`;
+          }
+
+          window.location.href = redirectUrl;
         }
         return;
       }
@@ -53,13 +61,29 @@ let DISABLE_GOVERNANCE_LOADER = true;
   // SAVE SCROLL POSITION ON SCROLL
   // --------------------------
   window.addEventListener("scroll", () => {
-    const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
-    if (!match) return;
+    const pathParts = location.pathname.split("/"); // [ '', 't', '<slug>', '<topicId>', '<postNumber>?']
+    const topicId = pathParts[3];
+    const postNumber = pathParts[4] || null;
 
-    sessionStorage.setItem(`topic-scroll-${match[1]}`, window.scrollY);
+    if (!topicId) return;
+
+    // Save last read post
+    localStorage.setItem("topic", JSON.stringify({ topicId, postNumber }));
+
+    // Save scroll position per topic
+    sessionStorage.setItem(`topic-scroll-${topicId}`, window.scrollY);
   });
 
-})(); // End of first IIFE
+  // --------------------------
+  // RESTORE SCROLL ON PAGE LOAD
+  // --------------------------
+  window.addEventListener("load", () => {
+    const pathParts = location.pathname.split("/");
+    const topicId = pathParts[3];
+    if (topicId) hardRestoreScroll(topicId);
+  });
+
+})(); // End of IIFE
 
 
 
@@ -11817,7 +11841,7 @@ document.addEventListener("click", (e) => {
 
 api.onPageChange(() => {
 
-setTimeout(() => hardRestoreScroll(currentTopicId), 300);
+  setTimeout(() => hardRestoreScroll(currentTopicId), 300);
   setTimeout(() => hardRestoreScroll(currentTopicId), 800);
 
 
