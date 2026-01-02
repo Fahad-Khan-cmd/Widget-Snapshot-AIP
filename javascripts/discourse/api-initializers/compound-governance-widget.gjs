@@ -20,6 +20,8 @@ let DISABLE_GOVERNANCE_LOADER = true;
 
         console.log("match", match);
 
+
+        return;
         
       }
       target = target.parentNode;
