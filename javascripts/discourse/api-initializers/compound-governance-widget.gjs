@@ -2,73 +2,94 @@ import { apiInitializer } from "discourse/lib/api";
 
 let DISABLE_GOVERNANCE_LOADER = true;
 
-// =====================================================
-// 🔗 CLICK HANDLER + HELPERS (SELF FUNCTION)
-// =====================================================
+
+
 (function () {
 
-  // ------------------------------
-  // Topic link click interception
-  // ------------------------------
-  document.addEventListener(
-    "click",
-    function (e) {
-      let target = e.target;
+  // ===============================
+  // 🔹 TOPIC LINK CLICK OVERRIDE
+  // ===============================
+  document.addEventListener("click", function (e) {
+    let target = e.target;
 
-      while (target && target !== document) {
-        if (target.matches("a.title.raw-link.raw-topic-link")) {
-          e.preventDefault();
-          e.stopPropagation();
+    while (target && target !== document) {
+      if (target.matches("a.title.raw-link.raw-topic-link")) {
+        e.preventDefault();
+        e.stopPropagation();
 
-          const href = target.getAttribute("href");
-          const match = href.match(/\/t\/[^\/]+\/(\d+)/);
-          if (!match) return;
-
-          const topicId = match[1];
-
-          // Last read post number
-          const lastPost = sessionStorage.getItem(
-            `topic-last-post-${topicId}`
-          );
-
-          if (lastPost) {
-            window.location.href = `/t/${topicId}/${lastPost}`;
-          } else {
-            window.location.href = `/t/${topicId}/${topicId}`;
-          }
-          return;
-        }
-        target = target.parentNode;
-      }
-    },
-    true
-  );
-
-  // ------------------------------
-  // Save last read post
-  // ------------------------------
-  window.trackLastReadPost = function () {
-    document.querySelectorAll(".post").forEach((post) => {
-      post.addEventListener("mouseenter", () => {
-        const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
+        const href = target.getAttribute("href");
+        const match = href.match(/\/t\/[^\/]+\/(\d+)/);
         if (!match) return;
 
         const topicId = match[1];
+
+        const local = localStorage.getItem("topic")
+          ? JSON.parse(localStorage.getItem("topic"))
+          : null;
+
+        if (local && local.topicId == topicId && local.postNumber) {
+          window.location.href = `/t/${topicId}/${local.postNumber}`;
+        } else {
+          window.location.href = `/t/${topicId}`;
+        }
+        return;
+      }
+      target = target.parentNode;
+    }
+  }, true);
+
+  // ===============================
+  // 🔹 SAVE LAST VISIBLE POST
+  // ===============================
+  window.addEventListener("scroll", () => {
+    const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
+    if (!match) return;
+
+    const topicId = match[1];
+    const posts = document.querySelectorAll(".post");
+
+    for (let post of posts) {
+      const rect = post.getBoundingClientRect();
+      if (rect.top >= 0 && rect.top < window.innerHeight / 2) {
         const postNumber =
-          post.dataset.postNumber || post.id?.replace("post-", "");
+          post.dataset.postId || post.id.replace("post-", "");
 
-        if (!postNumber) return;
-
-        sessionStorage.setItem(
-          `topic-last-post-${topicId}`,
-          postNumber
+        localStorage.setItem(
+          "topic",
+          JSON.stringify({ topicId, postNumber })
         );
-      });
-    });
+
+        history.replaceState(null, "", `/t/${topicId}/${postNumber}`);
+        break;
+      }
+    }
+  });
+
+  // ===============================
+  // 🔹 RESTORE FUNCTION
+  // ===============================
+  window.restoreScrollToSavedPost = function (topicId) {
+    const local = localStorage.getItem("topic")
+      ? JSON.parse(localStorage.getItem("topic"))
+      : null;
+
+    if (!local || local.topicId != topicId) return;
+
+    const post = document.getElementById(`post-${local.postNumber}`);
+    if (!post) return;
+
+    let attempts = 0;
+    const max = 20;
+
+    const force = () => {
+      post.scrollIntoView({ behavior: "auto", block: "start" });
+      if (++attempts < max) requestAnimationFrame(force);
+    };
+
+    requestAnimationFrame(force);
   };
 
 })();
-
 
 
 
@@ -11827,21 +11848,20 @@ api.onPageChange(() => {
 
  const path = window.location.pathname;
 
-  // Not a topic page → ignore
-  if (!/^\/t\//.test(path)) return;
+   const path = window.location.pathname;
+  const match = path.match(/^\/t\/[^\/]+\/(\d+)/);
+  if (!match) return;
 
-  // Wait for posts to render
-  setTimeout(() => {
-    if (window.trackLastReadPost) {
-      window.trackLastReadPost();
-    }
-  }, 300);
+  const topicId = match[1];
 
-  setTimeout(() => {
-    if (window.trackLastReadPost) {
-      window.trackLastReadPost();
-    }
-  }, 800);
+  // 🔥 delayed restore (long topics fix)
+  setTimeout(() => restoreScrollToSavedPost(topicId), 800);
+  setTimeout(() => restoreScrollToSavedPost(topicId), 1400);
+
+  // 🔹 clean hash (#post-*)
+  if (window.location.hash.startsWith("#post-")) {
+    history.replaceState(null, "", window.location.pathname);
+  }
 
 
 
