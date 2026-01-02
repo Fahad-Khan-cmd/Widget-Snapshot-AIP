@@ -418,14 +418,9 @@ let globalComposerObserver = null;
   }
   
   // Track which topics have had widgets shown (to prevent disappearing on scroll)
-  function getTopicKey() {
-    const path = window.location.pathname;
-    const topicMatch = path.match(/\/t\/([^\/]+)\/(\d+)/);
-    if (topicMatch) {
-      return `topic_${topicMatch[2]}`; // Use topic ID as key
-    }
-    return `page_${path}`; // Fallback to full path
-  }
+// ----------------xyz--
+
+
   
   function hasWidgetBeenShown() {
     try {
