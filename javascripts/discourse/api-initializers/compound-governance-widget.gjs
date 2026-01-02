@@ -21,8 +21,13 @@ let DISABLE_GOVERNANCE_LOADER = true;
         console.log("match", match);
 
 
+        if (match) {
+          const topicId = match[1];
+          // Navigate to topic start
+          window.location.href = `/t/${topicId}`;
+        }
         return;
-        
+
       }
       target = target.parentNode;
     }
