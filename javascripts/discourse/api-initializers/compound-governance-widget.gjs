@@ -4,92 +4,80 @@ let DISABLE_GOVERNANCE_LOADER = true;
 
 
 
-(function () {
 
-  // ===============================
-  // 🔹 TOPIC LINK CLICK OVERRIDE
-  // ===============================
-  document.addEventListener("click", function (e) {
+// discourse-custom-topic-navigation.js
+(function() {
+  document.addEventListener('click', function(e) {
     let target = e.target;
-
+    
+    // Find the topic link
     while (target && target !== document) {
-      if (target.matches("a.title.raw-link.raw-topic-link")) {
+      if (target.matches('a.title.raw-link.raw-topic-link')) {
         e.preventDefault();
         e.stopPropagation();
+        
+        // Extract topic ID from href
+        const href = target.getAttribute('href');
+        const match = href.match(/\/t\/([^\/]+)/);
 
-        const href = target.getAttribute("href");
-        const match = href.match(/\/t\/[^\/]+\/(\d+)/);
-        if (!match) return;
+        console.log("match", match);
 
-        const topicId = match[1];
 
-        const local = localStorage.getItem("topic")
-          ? JSON.parse(localStorage.getItem("topic"))
-          : null;
-
-        if (local && local.topicId == topicId && local.postNumber) {
-          window.location.href = `/t/${topicId}/${local.postNumber}`;
-        } else {
-          window.location.href = `/t/${topicId}`;
+        if (match) {
+          const topicId = match[1];
+          // Navigate to topic start
+          window.location.href = /t/${topicId};
         }
         return;
+
       }
       target = target.parentNode;
     }
   }, true);
+})();
 
-  // ===============================
-  // 🔹 SAVE LAST VISIBLE POST
-  // ===============================
-  window.addEventListener("scroll", () => {
-    const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
-    if (!match) return;
 
-    const topicId = match[1];
-    const posts = document.querySelectorAll(".post");
 
-    for (let post of posts) {
-      const rect = post.getBoundingClientRect();
-      if (rect.top >= 0 && rect.top < window.innerHeight / 2) {
-        const postNumber =
-          post.dataset.postId || post.id.replace("post-", "");
 
-        localStorage.setItem(
-          "topic",
-          JSON.stringify({ topicId, postNumber })
-        );
 
-        history.replaceState(null, "", `/t/${topicId}/${postNumber}`);
-        break;
-      }
+
+
+// ----------------------- xyz -------------
+// -----------------------------
+// SAVE SCROLL POSITION
+// -----------------------------
+
+function hardRestoreScroll(topicId) {
+  const key = topic-scroll-${topicId};
+  const y = sessionStorage.getItem(key);
+  if (!y) return;
+
+  let attempts = 0;
+
+  const force = () => {
+    window.scrollTo(0, parseInt(y, 10));
+    attempts++;
+
+    if (attempts < 10) {
+      requestAnimationFrame(force);
     }
-  });
-
-  // ===============================
-  // 🔹 RESTORE FUNCTION
-  // ===============================
-  window.restoreScrollToSavedPost = function (topicId) {
-    const local = localStorage.getItem("topic")
-      ? JSON.parse(localStorage.getItem("topic"))
-      : null;
-
-    if (!local || local.topicId != topicId) return;
-
-    const post = document.getElementById(`post-${local.postNumber}`);
-    if (!post) return;
-
-    let attempts = 0;
-    const max = 20;
-
-    const force = () => {
-      post.scrollIntoView({ behavior: "auto", block: "start" });
-      if (++attempts < max) requestAnimationFrame(force);
-    };
-
-    requestAnimationFrame(force);
   };
 
-})();
+  requestAnimationFrame(force);
+}
+
+
+
+
+window.addEventListener("scroll", () => {
+  const match = location.pathname.match(/^\/t\/[^\/]+\/(\d+)/);
+  if (!match) return;
+
+  sessionStorage.setItem(
+    topic-scroll-${match[1]},
+    window.scrollY
+  );
+});
 
 
 
@@ -11839,23 +11827,13 @@ document.addEventListener("click", (e) => {
 
 api.onPageChange(() => {
 
+setTimeout(() => {
+  hardRestoreScroll(currentTopicId);
+}, 300);
 
-
-
-   const currentPath  = window.location.pathname;
-  const match = currentPath.match(/^\/t\/[^\/]+\/(\d+)/);
-  if (!match) return;
-
-  const topicId = match[1];
-
-  // 🔥 delayed restore (long topics fix)
-  setTimeout(() => restoreScrollToSavedPost(topicId), 800);
-  setTimeout(() => restoreScrollToSavedPost(topicId), 1400);
-
-  // 🔹 clean hash (#post-*)
-  if (window.location.hash.startsWith("#post-")) {
-    history.replaceState(null, "", window.location.pathname);
-  }
+setTimeout(() => {
+  hardRestoreScroll(currentTopicId);
+}, 800);
 
 
 
