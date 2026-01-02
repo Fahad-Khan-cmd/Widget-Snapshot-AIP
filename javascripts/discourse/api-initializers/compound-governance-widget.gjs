@@ -11841,8 +11841,10 @@ document.addEventListener("click", (e) => {
 
 api.onPageChange(() => {
 
-  setTimeout(() => hardRestoreScroll(currentTopicId), 300);
-  setTimeout(() => hardRestoreScroll(currentTopicId), 800);
+hardRestoreScroll(currentTopicId)
+hardRestoreScroll(currentTopicId)
+
+
 
 
 
