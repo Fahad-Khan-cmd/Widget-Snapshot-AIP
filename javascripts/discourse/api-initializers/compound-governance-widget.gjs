@@ -11841,8 +11841,8 @@ document.addEventListener("click", (e) => {
 
 api.onPageChange(() => {
 
-hardRestoreScroll(currentTopicId)
-hardRestoreScroll(currentTopicId)
+hardRestoreScroll(currentTopicId);
+
 
 
 
