@@ -11847,8 +11847,8 @@ api.onPageChange(() => {
 
 
 
-   const path = window.location.pathname;
-  const match = path.match(/^\/t\/[^\/]+\/(\d+)/);
+   const currentPath  = window.location.pathname;
+  const match = currentPath.match(/^\/t\/[^\/]+\/(\d+)/);
   if (!match) return;
 
   const topicId = match[1];
