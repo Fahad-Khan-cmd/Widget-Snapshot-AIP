@@ -3,6 +3,20 @@ import { apiInitializer } from "discourse/lib/api";
 let DISABLE_GOVERNANCE_LOADER = true;
 
 
+  function hardRestoreScroll(topicId) {
+    const key = `topic-scroll-${topicId}`;
+    const y = sessionStorage.getItem(key);
+    if (!y) return;
+
+    let attempts = 0;
+    const force = () => {
+      window.scrollTo(0, parseInt(y, 10));
+      attempts++;
+      if (attempts < 10) requestAnimationFrame(force);
+    };
+    requestAnimationFrame(force);
+  }
+
 // discourse-custom-topic-navigation.js
 (function () {
 
